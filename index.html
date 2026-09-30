@@ -180,7 +180,7 @@
 
   <div id="mainApp" style="display:none;">
   <div class="view-tabs">
-    <button class="view-tab active" id="tabSongs" onclick="switchView('songs')">點歌本</button>
+    <button class="view-tab active" id="tabSongs" onclick="switchView('songs')">好聽音樂</button>
     <button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播列表</button>
   </div>
 
@@ -344,7 +344,8 @@ function render(){
       const stream = STREAMS[s.streamId];
       return s.name.toLowerCase().includes(q)
         || (s.artist||'').toLowerCase().includes(q)
-        || (stream && (stream.title||'').toLowerCase().includes(q));
+        || (stream && (stream.title||'').toLowerCase().includes(q))
+        || (s.tags||[]).some(t => t.toLowerCase().includes(q));
     });
   }
 
@@ -374,7 +375,7 @@ function render(){
       // 屬於某場直播的歌曲：只顯示是哪場直播，不放播放按鈕
       // 沒有掛在任何直播下的歌曲：不特別顯示來源，但可以播放
       const subLabel = stream ? (stream.title || '') : '';
-      const canPlay = !stream && isYouTubeUrl(resolveSongVideoUrl(s));
+      const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
       return `<div class="song-row">
         <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
         <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
@@ -523,7 +524,9 @@ function renderStreamsView(){
   for(const { stream, songs } of withSongs){
     const isOtherHouse = (stream.tags||[]).some(t => t.toLowerCase() === '別人家');
     const hostName = isOtherHouse && stream.guests && stream.guests.length ? stream.guests[0] : null;
-    const guestsDisplay = isOtherHouse ? '幽李鈴' : ((stream.guests && stream.guests.length) ? stream.guests.join('、') : '');
+    const guestsDisplay = isOtherHouse
+      ? ['幽李鈴', ...((stream.guests||[]).slice(1))].join('、')
+      : ((stream.guests && stream.guests.length) ? stream.guests.join('、') : '');
     html += `<div class="stream-block">
       <div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
       <div class="stream-block-title">${stream.url ? `<a href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '直播連結')}</a>` : escapeHtml(stream.title || '未命名直播')}</div>
