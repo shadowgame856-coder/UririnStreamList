@@ -200,6 +200,7 @@
     <div class="searchbar">
       <input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
     </div>
+    <div class="stats" id="songsStatsLine"></div>
     <div class="chip-bar" id="langBar"></div>
     <div id="content"></div>
   </div>
@@ -207,7 +208,7 @@
   <div id="streamsView" style="display:none;">
     <div class="year-pager" id="yearPager"></div>
     <div class="searchbar">
-      <input type="text" id="streamSearchInput" placeholder="搜尋歌名或歌手…">
+      <input type="text" id="streamSearchInput" placeholder="搜尋直播標題、來賓…">
     </div>
     <div class="stats" id="streamsStatsLine"></div>
     <div class="chip-bar" id="streamTagBar"></div>
@@ -241,6 +242,7 @@ let activeStreamTag = null;
 const contentEl = document.getElementById('content');
 const statsLine = document.getElementById('statsLine');
 const streamsStatsLine = document.getElementById('streamsStatsLine');
+const songsStatsLine = document.getElementById('songsStatsLine');
 const searchInput = document.getElementById('searchInput');
 const langBarEl = document.getElementById('langBar');
 
@@ -353,7 +355,8 @@ function render(){
 
   songs.sort((a,b) => a.name.localeCompare(b.name, 'zh-Hant'));
 
-  statsLine.textContent = `共 ${songs.length} 首`;
+  statsLine.textContent = '';
+  songsStatsLine.textContent = `共 ${songs.length} 首`;
 
   if(songs.length === 0){
     contentEl.innerHTML = `<div class="empty-state">
@@ -493,9 +496,10 @@ function songsForStream(streamId){
 function streamMatchesQuery(stream, songs, q){
   if(!q) return true;
   q = q.toLowerCase();
+  const titleMatch = (stream.title||'').toLowerCase().includes(q);
   const guestMatch = (stream.guests||[]).some(g => g.toLowerCase().includes(q));
   const songMatch = songs.some(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
-  return guestMatch || songMatch;
+  return titleMatch || guestMatch || songMatch;
 }
 
 function renderStreamsView(){
@@ -523,7 +527,7 @@ function renderStreamsView(){
   const filterParts = [`${activeYear} 年`];
   if(activeStreamTag) filterParts.push(activeStreamTag);
   if(q) filterParts.push(`「${q}」`);
-  streamsStatsLine.textContent = `${filterParts.join(' · ')} · 共 ${withSongs.length} 場直播`;
+  streamsStatsLine.textContent = `${filterParts.join(' · ')} · 共 ${withSongs.length} 筆`;
 
   if(withSongs.length === 0){
     streamsContent.innerHTML = `<div class="empty-state">
