@@ -209,6 +209,7 @@
     <div class="searchbar">
       <input type="text" id="streamSearchInput" placeholder="搜尋歌名或歌手…">
     </div>
+    <div class="stats" id="streamsStatsLine"></div>
     <div class="chip-bar" id="streamTagBar"></div>
     <div id="streamsContent"></div>
   </div>
@@ -239,6 +240,7 @@ let activeStreamTag = null;
 
 const contentEl = document.getElementById('content');
 const statsLine = document.getElementById('statsLine');
+const streamsStatsLine = document.getElementById('streamsStatsLine');
 const searchInput = document.getElementById('searchInput');
 const langBarEl = document.getElementById('langBar');
 
@@ -436,7 +438,14 @@ function renderYearPager(){
 function streamsInYear(year){
   return Object.values(STREAMS)
     .filter(s => s.year === year)
-    .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+    .sort((a,b) => {
+      const dateCompare = (b.date||'').localeCompare(a.date||'');
+      if(dateCompare !== 0) return dateCompare;
+      // 同一天：依 id 倒序排列
+      const na = parseFloat(a.id), nb = parseFloat(b.id);
+      if(!isNaN(na) && !isNaN(nb)) return nb - na;
+      return String(b.id).localeCompare(String(a.id));
+    });
 }
 
 function allStreamTags(){
@@ -493,13 +502,14 @@ function renderStreamsView(){
   renderYearPager();
   renderStreamTagBar();
 
+  statsLine.textContent = '';
   const streamsContent = document.getElementById('streamsContent');
   if(!activeYear){
     streamsContent.innerHTML = `<div class="empty-state">
       <div class="big">還沒有任何直播紀錄</div>
       <div>把 streams 資料補齊後，這裡就會列出來</div>
     </div>`;
-    statsLine.textContent = '';
+    streamsStatsLine.textContent = '';
     return;
   }
 
@@ -510,7 +520,10 @@ function renderStreamsView(){
   const withSongs = list.map(stream => ({ stream, songs: songsForStream(stream.id) }))
     .filter(({stream, songs}) => streamMatchesQuery(stream, songs, q));
 
-  statsLine.textContent = `${activeYear} 年 · 共 ${withSongs.length} 場直播`;
+  const filterParts = [`${activeYear} 年`];
+  if(activeStreamTag) filterParts.push(activeStreamTag);
+  if(q) filterParts.push(`「${q}」`);
+  streamsStatsLine.textContent = `${filterParts.join(' · ')} · 共 ${withSongs.length} 場直播`;
 
   if(withSongs.length === 0){
     streamsContent.innerHTML = `<div class="empty-state">
