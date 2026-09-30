@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>點歌本</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #14121f;
+    --surface: #1e1b2e;
+    --surface-2: #26223a;
+    --line: #362f4d;
+    --text: #f2eee6;
+    --muted: #948fa8;
+    --gold: #e3b158;
+    --rose: #d97a93;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--text);
+    font-family:'Noto Sans TC', sans-serif;
+    line-height:1.6;
+    min-height:100vh;
+  }
+  .wrap{
+    max-width:760px;
+    margin:0 auto;
+    padding:48px 20px 100px;
+  }
+  h1{
+    font-family:'Noto Serif TC', serif;
+    font-weight:700; font-size:2rem; margin:0 0 6px; letter-spacing:.02em;
+  }
+  .subtitle{ color:var(--muted); font-size:.95rem; margin:0 0 4px; }
+  .stats{ color:var(--gold); font-size:.88rem; margin-top:6px; }
+
+  .view-tabs{ display:flex; gap:8px; margin-top:24px; border-bottom:1px solid var(--line); }
+  .view-tab{
+    background:transparent; border:none; color:var(--muted); font-family:inherit;
+    font-size:.95rem; padding:10px 4px; cursor:pointer; position:relative; margin-right:14px;
+  }
+  .view-tab:hover{ color:var(--text); }
+  .view-tab.active{ color:var(--gold); font-weight:700; }
+  .view-tab.active::after{
+    content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--gold);
+  }
+
+  .searchbar{ margin-top:22px; }
+  .searchbar input{
+    width:100%; background:var(--surface); border:1px solid var(--line);
+    color:var(--text); border-radius:8px; padding:12px 14px;
+    font-size:1rem; font-family:inherit;
+  }
+  .searchbar input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+  .searchbar input::placeholder{ color:var(--muted); }
+
+  .chip-bar{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .chip{
+    background:var(--surface); border:1px solid var(--line); color:var(--muted);
+    font-size:.86rem; padding:6px 14px; border-radius:999px; cursor:pointer; font-family:inherit;
+  }
+  .chip:hover{ border-color:var(--gold); color:var(--text); }
+  .chip.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
+
+  .year-pager{ display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
+  .year-btn{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    font-size:1rem; padding:8px 18px; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:500;
+  }
+  .year-btn:hover{ border-color:var(--gold); color:var(--gold); }
+  .year-btn.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
+
+  .song-list{
+    margin-top:20px;
+    background:var(--surface);
+    border:1px solid var(--line);
+    border-radius:10px;
+    overflow:hidden;
+  }
+  .song-row{
+    display:flex; align-items:baseline; gap:12px;
+    padding:11px 16px; border-bottom:1px solid var(--line);
+  }
+  .song-row:last-child{ border-bottom:none; }
+  .song-name{ font-weight:500; flex:1; min-width:0; }
+  .song-sub{ color:var(--muted); font-size:.86rem; flex-shrink:0; max-width:38%; text-align:right; }
+  .song-lang-badge{
+    color:var(--rose); font-size:.72rem; border:1px solid var(--line); border-radius:5px;
+    padding:1px 6px; flex-shrink:0;
+  }
+  .song-play-btn{
+    background:var(--gold); color:#22190a; border:none; border-radius:6px;
+    padding:5px 11px; font-size:.78rem; font-weight:700; cursor:pointer; flex-shrink:0;
+    font-family:inherit;
+  }
+  .song-play-btn:hover{ filter:brightness(1.08); }
+
+  .pagination{
+    display:flex; align-items:center; justify-content:center; gap:8px;
+    margin-top:18px; flex-wrap:wrap;
+  }
+  .page-btn{
+    background:var(--surface); border:1px solid var(--line); color:var(--text);
+    border-radius:7px; padding:7px 13px; font-size:.88rem; cursor:pointer; font-family:inherit;
+  }
+  .page-btn:hover:not(:disabled){ border-color:var(--gold); color:var(--gold); }
+  .page-btn.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
+  .page-btn:disabled{ opacity:.35; cursor:default; }
+  .page-info{ color:var(--muted); font-size:.85rem; margin:0 4px; }
+
+  .player-panel{
+    background:var(--surface); border:1px solid var(--gold); border-radius:12px;
+    padding:14px; margin-top:22px;
+  }
+  .player-panel-head{
+    display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
+  }
+  .player-panel-title{ color:var(--gold); font-size:.9rem; font-weight:700; }
+  .player-frame-wrap{
+    position:relative; width:100%; padding-bottom:56.25%; height:0;
+    border-radius:8px; overflow:hidden; background:#000;
+  }
+  .player-frame-wrap iframe{
+    position:absolute; top:0; left:0; width:100%; height:100%; border:0;
+  }
+  .btn.ghost{
+    background:transparent; border:1px solid var(--line); color:var(--muted);
+    border-radius:6px; padding:6px 10px; font-size:.8rem; cursor:pointer; font-family:inherit;
+  }
+  .btn.ghost:hover{ color:var(--rose); border-color:var(--rose); }
+
+  .stream-timeline{
+    position:relative; margin-top:24px; padding-left:26px; border-left:2px solid var(--line);
+  }
+  .stream-block{ position:relative; margin-bottom:36px; }
+  .stream-block::before{
+    content:''; position:absolute; left:-32px; top:6px;
+    width:11px; height:11px; border-radius:50%; background:var(--gold);
+    box-shadow:0 0 0 4px var(--bg);
+  }
+  .stream-block-date{ color:var(--gold); font-size:.85rem; font-weight:700; letter-spacing:.04em; }
+  .stream-block-title{
+    font-family:'Noto Serif TC', serif; font-weight:700; font-size:1.1rem; margin:2px 0 8px;
+  }
+  .stream-block-title a{ color:var(--text); text-decoration:none; border-bottom:1px solid var(--gold); }
+  .stream-block-title a:hover{ color:var(--gold); }
+  .stream-tags-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+  .stream-tags-row .chip{ padding:3px 10px; font-size:.78rem; }
+
+  .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
+  .empty-state .big{
+    font-family:'Noto Serif TC', serif; font-size:1.25rem; color:var(--text); margin-bottom:8px;
+  }
+  .loading-state{ text-align:center; padding:80px 20px; color:var(--muted); }
+  .error-state{
+    background:#3a1f24; border:1px solid var(--rose); color:var(--text);
+    border-radius:10px; padding:20px; margin-top:24px; font-size:.9rem; line-height:1.8;
+  }
+  .error-state code{ background:var(--surface-2); padding:2px 6px; border-radius:4px; font-size:.85em; }
+
+  @media (max-width:520px){
+    .wrap{ padding:32px 14px 80px; }
+    .song-row{ flex-direction:column; align-items:flex-start; gap:4px; }
+    .song-sub{ max-width:100%; text-align:left; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>點歌本</h1>
+  <p class="subtitle">歌單與歌回時間軸，可搜尋、依語言／年份／標籤篩選</p>
+
+  <div id="loadingState" class="loading-state">正在讀取資料…</div>
+  <div id="errorState" style="display:none;"></div>
+
+  <div id="mainApp" style="display:none;">
+  <div class="view-tabs">
+    <button class="view-tab active" id="tabSongs" onclick="switchView('songs')">點歌本</button>
+    <button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播列表</button>
+  </div>
+
+  <div class="stats" id="statsLine"></div>
+
+  <div id="playerPanel" class="player-panel" style="display:none;">
+    <div class="player-panel-head">
+      <span class="player-panel-title" id="playerPanelTitle"></span>
+      <button class="btn ghost" onclick="closePlayer()">✕ 關閉播放器</button>
+    </div>
+    <div class="player-frame-wrap">
+      <iframe id="playerIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    </div>
+  </div>
+
+  <div id="songsView">
+    <div class="searchbar">
+      <input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
+    </div>
+    <div class="chip-bar" id="langBar"></div>
+    <div id="content"></div>
+  </div>
+
+  <div id="streamsView" style="display:none;">
+    <div class="year-pager" id="yearPager"></div>
+    <div class="searchbar">
+      <input type="text" id="streamSearchInput" placeholder="搜尋歌名或歌手…">
+    </div>
+    <div class="chip-bar" id="streamTagBar"></div>
+    <div id="streamsContent"></div>
+  </div>
+  </div>
+</div>
+
+<script>
+let STREAMS = {};        // { id: {id,year,date,title,url,tags} }
+let STREAM_YEARS = [];   // 依 streams.xlsx 的工作表順序（工作表名稱＝年份）
+let SONGS = {};          // { lang: [ {id,streamId,timeSeconds,timeDisplay,name,artist,tags} ] }
+let LANGUAGES = [];
+
+let currentView = 'songs';
+let activeLang = null;
+let currentPage = 1;
+const PAGE_SIZE = 50;
+
+function sortedYears(){
+  return [...STREAM_YEARS].sort((a,b) => {
+    const na = parseInt(a, 10), nb = parseInt(b, 10);
+    if(!isNaN(na) && !isNaN(nb)) return nb - na;
+    return String(b).localeCompare(String(a));
+  });
+}
+
+let activeYear = null; // 資料載入完成後會設成最新年份
+let activeStreamTag = null;
+
+const contentEl = document.getElementById('content');
+const statsLine = document.getElementById('statsLine');
+const searchInput = document.getElementById('searchInput');
+const langBarEl = document.getElementById('langBar');
+
+function escapeHtml(str){
+  return (str||'').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+}
+
+function extractYouTubeId(url){
+  if(!url) return null;
+  try{
+    const u = new URL(url);
+    const host = u.hostname.replace('www.', '');
+    if(host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+    if(host === 'youtube.com' || host === 'm.youtube.com'){
+      if(u.pathname === '/watch') return u.searchParams.get('v');
+      if(u.pathname.startsWith('/live/')) return u.pathname.split('/')[2];
+      if(u.pathname.startsWith('/embed/')) return u.pathname.split('/')[2];
+    }
+    return null;
+  }catch(e){ return null; }
+}
+function isYouTubeUrl(url){ return extractYouTubeId(url) !== null; }
+
+function resolveSongVideoUrl(song){
+  if(song.url) return song.url; // 歌曲自己就有網址，優先使用
+  const stream = STREAMS[song.streamId];
+  return stream ? stream.url : '';
+}
+
+function resolveSongContextLabel(song){
+  if(song.url && !STREAMS[song.streamId]) return ''; // 沒有對應直播，就不顯示直播名稱
+  const stream = STREAMS[song.streamId];
+  return stream ? (stream.title || '直播') : '';
+}
+
+function playSong(lang, songId){
+  const song = (SONGS[lang] || []).find(s => s.id === songId);
+  if(!song) return;
+  const videoUrl = resolveSongVideoUrl(song);
+  const videoId = extractYouTubeId(videoUrl);
+  if(!videoId) return;
+  const panel = document.getElementById('playerPanel');
+  const iframe = document.getElementById('playerIframe');
+  const title = document.getElementById('playerPanelTitle');
+  const contextLabel = resolveSongContextLabel(song);
+  iframe.src = `https://www.youtube.com/embed/${videoId}?start=${song.timeSeconds}&autoplay=1`;
+  title.textContent = contextLabel ? `${contextLabel} － ${song.name}` : song.name;
+  panel.style.display = 'block';
+  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.playSong = playSong;
+
+function closePlayer(){
+  document.getElementById('playerIframe').src = '';
+  document.getElementById('playerPanel').style.display = 'none';
+}
+window.closePlayer = closePlayer;
+
+// ================= 頁籤切換 =================
+function switchView(view){
+  currentView = view;
+  document.getElementById('tabSongs').classList.toggle('active', view === 'songs');
+  document.getElementById('tabStreams').classList.toggle('active', view === 'streams');
+  document.getElementById('songsView').style.display = view === 'songs' ? 'block' : 'none';
+  document.getElementById('streamsView').style.display = view === 'streams' ? 'block' : 'none';
+  if(view === 'songs') render(); else renderStreamsView();
+}
+window.switchView = switchView;
+
+// ================= 點歌本（歌單）=================
+function renderLangBar(){
+  let html = `<span class="chip${activeLang===null?' active':''}" onclick="setLang(null)">全部</span>`;
+  for(const lang of LANGUAGES){
+    html += `<span class="chip${activeLang===lang?' active':''}" onclick="setLang('${lang}')">${escapeHtml(lang)}<span style="opacity:.7;margin-left:4px;font-size:.85em;">${SONGS[lang].length}</span></span>`;
+  }
+  langBarEl.innerHTML = html;
+}
+
+function setLang(lang){
+  activeLang = lang;
+  currentPage = 1;
+  render();
+}
+window.setLang = setLang;
+
+function getAllSongsFlat(){
+  const result = [];
+  const langs = activeLang ? [activeLang] : LANGUAGES;
+  for(const lang of langs){
+    for(const song of SONGS[lang]) result.push({ ...song, lang });
+  }
+  return result;
+}
+
+function render(){
+  renderLangBar();
+
+  const q = searchInput.value.trim().toLowerCase();
+  let songs = getAllSongsFlat();
+
+  if(q){
+    songs = songs.filter(s => {
+      const stream = STREAMS[s.streamId];
+      return s.name.toLowerCase().includes(q)
+        || (s.artist||'').toLowerCase().includes(q)
+        || (stream && (stream.title||'').toLowerCase().includes(q));
+    });
+  }
+
+  songs.sort((a,b) => a.name.localeCompare(b.name, 'zh-Hant'));
+
+  statsLine.textContent = `共 ${songs.length} 首`;
+
+  if(songs.length === 0){
+    contentEl.innerHTML = `<div class="empty-state">
+      <div class="big">沒有符合的結果</div>
+      <div>換個關鍵字或分類試試看</div>
+    </div>`;
+    return;
+  }
+
+  const totalPages = Math.max(1, Math.ceil(songs.length / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  if(currentPage < 1) currentPage = 1;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageSongs = songs.slice(start, start + PAGE_SIZE);
+
+  contentEl.innerHTML =
+    renderPagination(totalPages) +
+    `<div class="song-list">` +
+    pageSongs.map(s => {
+      const stream = STREAMS[s.streamId];
+      const videoUrl = resolveSongVideoUrl(s);
+      const canPlay = isYouTubeUrl(videoUrl);
+      const subLabel = stream ? (stream.title || '') : (s.url ? '（非直播歌曲）' : '');
+      return `<div class="song-row">
+        <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+        <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+        <div class="song-sub">${escapeHtml(subLabel)}</div>
+        ${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+      </div>`;
+    }).join('') +
+    `</div>` +
+    renderPagination(totalPages);
+}
+
+function goToSongPage(p){
+  currentPage = p;
+  render();
+  contentEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+window.goToSongPage = goToSongPage;
+
+function renderPagination(totalPages){
+  if(totalPages <= 1) return '';
+  const p = currentPage;
+  let pages = [1];
+  for(let i = p - 1; i <= p + 1; i++){ if(i > 1 && i < totalPages) pages.push(i); }
+  if(totalPages > 1) pages.push(totalPages);
+  pages = [...new Set(pages)].sort((a,b) => a - b);
+
+  let html = `<div class="pagination">`;
+  html += `<button class="page-btn" onclick="goToSongPage(${p - 1})" ${p <= 1 ? 'disabled' : ''}>‹ 上一頁</button>`;
+  let prev = 0;
+  for(const num of pages){
+    if(prev && num - prev > 1) html += `<span class="page-info">…</span>`;
+    html += `<button class="page-btn${num === p ? ' active' : ''}" onclick="goToSongPage(${num})">${num}</button>`;
+    prev = num;
+  }
+  html += `<button class="page-btn" onclick="goToSongPage(${p + 1})" ${p >= totalPages ? 'disabled' : ''}>下一頁 ›</button>`;
+  html += `</div>`;
+  return html;
+}
+
+searchInput.addEventListener('input', ()=>{ currentPage = 1; render(); });
+
+// ================= 直播列表（依年份分頁）=================
+function setYear(year){
+  activeYear = year;
+  renderStreamsView();
+}
+window.setYear = setYear;
+
+function renderYearPager(){
+  const years = sortedYears();
+  const pager = document.getElementById('yearPager');
+  pager.innerHTML = years.map(y =>
+    `<button class="year-btn${activeYear===y?' active':''}" onclick="setYear('${y}')">${escapeHtml(y)} 年</button>`
+  ).join('');
+}
+
+function streamsInYear(year){
+  return Object.values(STREAMS)
+    .filter(s => s.year === year)
+    .sort((a,b) => (b.date||'').localeCompare(a.date||''));
+}
+
+function allStreamTags(){
+  const seen = new Map(); // 小寫 -> 第一次出現時的原始大小寫
+  for(const s of Object.values(STREAMS)){
+    for(const t of (s.tags||[])){
+      const key = t.toLowerCase();
+      if(!seen.has(key)) seen.set(key, t);
+    }
+  }
+  return [...seen.values()].sort((a,b) => a.localeCompare(b, 'zh-Hant'));
+}
+
+function renderStreamTagBar(){
+  const tags = allStreamTags();
+  const bar = document.getElementById('streamTagBar');
+  let html = `<span class="chip${activeStreamTag===null?' active':''}" onclick="setStreamTag(null)">全部</span>`;
+  for(const t of tags){
+    html += `<span class="chip${activeStreamTag===t?' active':''}" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`;
+  }
+  bar.innerHTML = html;
+}
+
+function setStreamTag(tag){
+  if(tag === null){
+    activeStreamTag = null;
+  } else {
+    const canonical = allStreamTags().find(t => t.toLowerCase() === tag.toLowerCase());
+    activeStreamTag = canonical || tag;
+  }
+  renderStreamsView();
+}
+window.setStreamTag = setStreamTag;
+
+function songsForStream(streamId){
+  const result = [];
+  for(const lang of LANGUAGES){
+    for(const song of SONGS[lang]){
+      if(song.streamId === streamId) result.push({ ...song, lang });
+    }
+  }
+  return result;
+}
+
+function streamMatchesQuery(stream, songs, q){
+  if(!q) return true;
+  q = q.toLowerCase();
+  const guestMatch = (stream.guests||[]).some(g => g.toLowerCase().includes(q));
+  const songMatch = songs.some(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
+  return guestMatch || songMatch;
+}
+
+function renderStreamsView(){
+  renderYearPager();
+  renderStreamTagBar();
+
+  const streamsContent = document.getElementById('streamsContent');
+  if(!activeYear){
+    streamsContent.innerHTML = `<div class="empty-state">
+      <div class="big">還沒有任何直播紀錄</div>
+      <div>把 streams 資料補齊後，這裡就會列出來</div>
+    </div>`;
+    statsLine.textContent = '';
+    return;
+  }
+
+  const q = (document.getElementById('streamSearchInput').value || '').trim();
+  let list = streamsInYear(activeYear);
+  if(activeStreamTag) list = list.filter(s => (s.tags||[]).some(t => t.toLowerCase() === activeStreamTag.toLowerCase()));
+
+  const withSongs = list.map(stream => ({ stream, songs: songsForStream(stream.id) }))
+    .filter(({stream, songs}) => streamMatchesQuery(stream, songs, q));
+
+  statsLine.textContent = `${activeYear} 年 · 共 ${withSongs.length} 場直播`;
+
+  if(withSongs.length === 0){
+    streamsContent.innerHTML = `<div class="empty-state">
+      <div class="big">沒有符合的直播</div>
+      <div>換個關鍵字或標籤試試看</div>
+    </div>`;
+    return;
+  }
+
+  let html = `<div class="stream-timeline">`;
+  for(const { stream, songs } of withSongs){
+    const canPlay = isYouTubeUrl(stream.url);
+    html += `<div class="stream-block">
+      <div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
+      <div class="stream-block-title">${stream.url ? `<a href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '直播連結')}</a>` : escapeHtml(stream.title || '未命名直播')}</div>
+      ${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${(stream.guests && stream.guests.length) ? `<div class="song-sub" style="text-align:left;margin-bottom:10px;">來賓：${escapeHtml(stream.guests.join('、'))}</div>` : ''}
+      <div class="song-list">` +
+      (songs.length === 0
+        ? `<div class="song-row"><div class="song-sub">這場還沒有歌曲紀錄</div></div>`
+        : songs.map(s => `<div class="song-row">
+            <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+            <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+            <div class="song-sub">${escapeHtml(s.artist || '')}</div>
+            ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+          </div>`).join('')) +
+      `</div>
+    </div>`;
+  }
+  html += `</div>`;
+  streamsContent.innerHTML = html;
+}
+
+document.getElementById('streamSearchInput').addEventListener('input', renderStreamsView);
+
+// ================= 讀取同資料夾的 json 檔案 =================
+async function fetchJson(path){
+  const res = await fetch(path, { cache: 'no-store' });
+  if(!res.ok) throw new Error(`找不到 ${path}（HTTP ${res.status}）`);
+  return res.json();
+}
+
+async function loadAllData(){
+  const [streamsData, songsData] = await Promise.all([
+    fetchJson('./streams.json'),
+    fetchJson('./songs.json'),
+  ]);
+
+  STREAMS = streamsData.streams || {};
+  STREAM_YEARS = streamsData.streamYears || [];
+  SONGS = songsData.songs || {};
+  LANGUAGES = Object.keys(SONGS);
+  activeYear = STREAM_YEARS.length ? sortedYears()[0] : null;
+}
+
+async function init(){
+  try{
+    await loadAllData();
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('mainApp').style.display = 'block';
+    render();
+  }catch(e){
+    document.getElementById('loadingState').style.display = 'none';
+    document.getElementById('errorState').style.display = 'block';
+    document.getElementById('errorState').innerHTML = `<div class="error-state">
+      <strong>讀取資料失敗。</strong><br><br>
+      請確認：<br>
+      1. <code>streams.json</code> 和 <code>songs.json</code> 跟這個 html 檔案放在同一個資料夾<br>
+      2. 檔名完全一致（含大小寫）<br>
+      3. 這個頁面是透過網址（http/https）打開的，不是直接雙擊本機檔案開啟<br><br>
+      錯誤訊息：${escapeHtml(e.message || String(e))}
+    </div>`;
+  }
+}
+
+init();
+</body>
+</html>
