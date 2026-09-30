@@ -20,6 +20,18 @@ def header_map(ws):
     return m
 
 
+def normalize_id(v):
+    if v in (None, ''):
+        return ''
+    try:
+        f = float(v)
+        if f == int(f):
+            return str(int(f))
+        return str(f)
+    except (ValueError, TypeError):
+        return str(v).strip()
+
+
 def get(row, m, *keys, default=None):
     for k in keys:
         if k in m:
@@ -86,7 +98,7 @@ for sheet_name in wb_streams.sheetnames:
         sid = get(row, m, 'id')
         if sid in (None, ''):
             continue
-        sid = str(sid)
+        sid = normalize_id(sid)
         streams[sid] = {
             'id': sid,
             'year': sheet_name,
@@ -113,8 +125,8 @@ for sheet_name in wb_songs.sheetnames:
             continue
         seconds = time_to_seconds(get(row, m, 'time'))
         lst.append({
-            'id': str(song_id),
-            'streamId': str(get(row, m, 'stream_id', default='') or ''),
+            'id': normalize_id(song_id),
+            'streamId': normalize_id(get(row, m, 'stream_id')),
             'timeSeconds': seconds,
             'timeDisplay': seconds_to_display(seconds) if seconds else '',
             'name': str(get(row, m, 'name', default='') or ''),
