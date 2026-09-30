@@ -1,0 +1,35 @@
+name: Convert xlsx to json
+
+on:
+  push:
+    paths:
+      - 'streams.xlsx'
+      - 'songs.xlsx'
+      - 'convert_xlsx_to_json.py'
+  workflow_dispatch: {}
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 安裝 openpyxl
+        run: pip install openpyxl
+
+      - name: 執行轉換
+        run: python convert_xlsx_to_json.py
+
+      - name: Commit 產出的 json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add streams.json songs.json
+          git diff --staged --quiet || git commit -m "自動轉換 xlsx 為 json"
+          git push
