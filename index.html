@@ -328,11 +328,19 @@ function setLang(lang){
 }
 window.setLang = setLang;
 
+function isRestrictedStream(stream){
+  return !!stream && (stream.tags||[]).some(t => t.toLowerCase() === '會限');
+}
+
 function getAllSongsFlat(){
   const result = [];
   const langs = activeLang ? [activeLang] : LANGUAGES;
   for(const lang of langs){
-    for(const song of SONGS[lang]) result.push({ ...song, lang });
+    for(const song of SONGS[lang]){
+      const stream = STREAMS[song.streamId];
+      if(isRestrictedStream(stream)) continue; // 會限場次的曲目不進點歌本，避免外流
+      result.push({ ...song, lang });
+    }
   }
   return result;
 }
@@ -499,7 +507,8 @@ function streamMatchesQuery(stream, songs, q){
   q = q.toLowerCase();
   const titleMatch = (stream.title||'').toLowerCase().includes(q);
   const guestMatch = (stream.guests||[]).some(g => g.toLowerCase().includes(q));
-  const songMatch = songs.some(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
+  // 會限場次不比對曲目內容，否則搜歌名還是能間接找到這場有唱過這首歌，等於曲目資訊照樣外流
+  const songMatch = !isRestrictedStream(stream) && songs.some(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
   return titleMatch || guestMatch || songMatch;
 }
 
@@ -552,14 +561,16 @@ function renderStreamsView(){
       ${hostName ? `<div class="song-sub" style="text-align:left;margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
       ${guestsDisplay ? `<div class="song-sub" style="text-align:left;margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}
       <div class="song-list">` +
-      (songs.length === 0
-        ? ''
-        : songs.map(s => `<div class="song-row">
-            <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-            <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
-            <div class="song-sub">${escapeHtml(s.artist || '')}</div>
-            ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
-          </div>`).join('')) +
+      (isRestrictedStream(stream)
+        ? `<div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div>`
+        : (songs.length === 0
+          ? ''
+          : songs.map(s => `<div class="song-row">
+              <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+              <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+              <div class="song-sub">${escapeHtml(s.artist || '')}</div>
+              ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+            </div>`).join(''))) +
       `</div>
     </div>`;
   }
