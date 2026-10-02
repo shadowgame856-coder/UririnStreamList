@@ -365,10 +365,25 @@ function getAllSongsFlat(){
   return result;
 }
 
-function songInstanceSortKey(s){
-  // 直接用 song_records 自己的 id 排序（數字越大代表越晚新增的紀錄）
-  const n = parseFloat(s.id);
+function toNum(v){
+  const n = parseFloat(v);
   return isNaN(n) ? 0 : n;
+}
+
+function compareSongInstances(a, b){
+  const aHasStream = !!a.streamId;
+  const bHasStream = !!b.streamId;
+  if(aHasStream !== bHasStream){
+    return aHasStream ? 1 : -1; // 沒有 stream_id 的排前面
+  }
+  if(!aHasStream){
+    // 都沒有 stream_id：依 song_records 的 id 倒序
+    return toNum(b.id) - toNum(a.id);
+  }
+  // 都有 stream_id：先依 stream_id 倒序，相同的話再依 song_records 的 id 倒序
+  const streamDiff = toNum(b.streamId) - toNum(a.streamId);
+  if(streamDiff !== 0) return streamDiff;
+  return toNum(b.id) - toNum(a.id);
 }
 
 function renderSongRowSingle(s, hideLangBadge){
@@ -462,7 +477,7 @@ function render(){
       </div>`;
 
       if(expanded){
-        const sorted = [...group].sort((a,b) => songInstanceSortKey(b) - songInstanceSortKey(a));
+        const sorted = [...group].sort(compareSongInstances);
         html += `<div style="padding-left:20px;border-left:2px solid var(--line);margin:0 0 8px 20px;">` +
           sorted.map(s => renderSongRowSingle(s, true)).join('') +
           `</div>`;
@@ -573,7 +588,7 @@ function renderSongRow(s){
     <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
     <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
     <div class="song-sub">${escapeHtml(s.artist || '')}</div>
-    ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+    ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
   </div>`;
 }
 
@@ -647,25 +662,29 @@ function renderStreamsView(){
     const guestsDisplay = isOtherHouse
       ? ['幽李鈴', ...((stream.guests||[]).slice(1))].join('、')
       : ((stream.guests && stream.guests.length) ? stream.guests.join('、') : '');
-    html += `<div class="stream-block">
+    const isMultiSong = !isRestrictedStream(stream) && songs.length > 1;
+    const expanded = isMultiSong && expandedStreams.has(stream.id);
+    const cardClickAttr = isMultiSong ? ` onclick="toggleStreamExpand('${stream.id}')" style="cursor:pointer;"` : '';
+
+    let songsSectionHtml = '';
+    if(isRestrictedStream(stream)){
+      songsSectionHtml = `<div class="song-list"><div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div></div>`;
+    } else if(songs.length === 1){
+      songsSectionHtml = `<div class="song-list">${renderSongRow(songs[0])}</div>`;
+    } else if(songs.length > 1){
+      songsSectionHtml = `<div class="song-sub" style="text-align:left;margin-bottom:10px;">共 ${songs.length} 首歌曲 ${expanded ? '▲' : '▶'}</div>`;
+      if(expanded){
+        songsSectionHtml += `<div class="song-list" onclick="event.stopPropagation()">${songs.map(s => renderSongRow(s)).join('')}</div>`;
+      }
+    }
+
+    html += `<div class="stream-block"${cardClickAttr}>
       <div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
-      <div class="stream-block-title">${stream.url ? `<a href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '直播連結')}</a>` : escapeHtml(stream.title || '未命名直播')}</div>
-      ${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      <div class="stream-block-title" onclick="event.stopPropagation()">${stream.url ? `<a href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '直播連結')}</a>` : escapeHtml(stream.title || '未命名直播')}</div>
+      ${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row" onclick="event.stopPropagation()">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       ${hostName ? `<div class="song-sub" style="text-align:left;margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
       ${guestsDisplay ? `<div class="song-sub" style="text-align:left;margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}
-      ` +
-      (isRestrictedStream(stream)
-        ? `<div class="song-list"><div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div></div>`
-        : (songs.length === 0
-          ? ''
-          : (songs.length === 1
-            ? `<div class="song-list">${renderSongRow(songs[0])}</div>`
-            : (() => {
-                const expanded = expandedStreams.has(stream.id);
-                return `<button class="chip" style="margin-bottom:10px;" onclick="toggleStreamExpand('${stream.id}')">${expanded ? '▲ 收合' : '▶ 展開'} 共 ${songs.length} 首歌曲</button>` +
-                  (expanded ? `<div class="song-list">${songs.map(s => renderSongRow(s)).join('')}</div>` : '');
-              })()))) +
-      `
+      ${songsSectionHtml}
     </div>`;
   }
   html += `</div>`;
