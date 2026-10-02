@@ -1,13 +1,15 @@
 """
-把 streams.xlsx / songs.xlsx 轉成 streams.json / songs.json
+把 streams.xlsx（歌回場次）＋ songs.xlsx（歌曲目錄）＋ song_records.xlsx（演出紀錄）
+轉成網站要讀的 streams.json / songs.json
 用法：python convert_xlsx_to_json.py
-預期這支程式跟兩個 xlsx 檔案在同一個資料夾（repo 根目錄）
+預期這三個 xlsx 檔案跟這支程式放在同一個資料夾（repo 根目錄）
 """
 import openpyxl, json, re, datetime, os
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-SONGS_PATH = os.path.join(BASE_DIR, 'songs.xlsx')
 STREAMS_PATH = os.path.join(BASE_DIR, 'streams.xlsx')
+CATALOG_PATH = os.path.join(BASE_DIR, 'songs.xlsx')          # 歌曲目錄
+RECORDS_PATH = os.path.join(BASE_DIR, 'song_records.xlsx')   # 演出紀錄
 
 
 def header_map(ws):
@@ -86,7 +88,16 @@ def date_to_str(v):
     return str(v).strip()
 
 
-# ---------- streams.xlsx：一個工作表 = 一個年份 ----------
+INVISIBLE_CHARS = re.compile(r'[\u200b\u200c\u200d\u200e\u200f\ufeff]')
+
+def clean_name(v):
+    if v is None:
+        return ''
+    s = INVISIBLE_CHARS.sub('', str(v))
+    return re.sub(r'\s+', '', s).strip()
+
+
+# ========== 1. streams.xlsx：一個工作表 = 一個年份 ==========
 wb_streams = openpyxl.load_workbook(STREAMS_PATH, data_only=True)
 streams = {}
 stream_years = []
@@ -112,32 +123,78 @@ for sheet_name in wb_streams.sheetnames:
 with open(os.path.join(BASE_DIR, 'streams.json'), 'w', encoding='utf-8') as f:
     json.dump({'streams': streams, 'streamYears': stream_years}, f, ensure_ascii=False)
 
-# ---------- songs.xlsx：一個工作表 = 一個語言 ----------
-wb_songs = openpyxl.load_workbook(SONGS_PATH, data_only=True)
-songs = {}
-for sheet_name in wb_songs.sheetnames:
-    ws = wb_songs[sheet_name]
+# ========== 2. songs.xlsx（目錄）：一個工作表 = 一個語言 ==========
+# 目錄的 id 用語言前綴格式（例如 zh1、ja1、en1），本身已經全域唯一。
+wb_catalog = openpyxl.load_workbook(CATALOG_PATH, data_only=True)
+catalog_by_id = {}     # norm_id -> {artist, language, name}  ← 主要查找鍵
+name_only_lookup = {}  # clean_name -> {artist, language}（id 對不到時的備援，例如舊格式的數字 id）
+
+for lang in wb_catalog.sheetnames:
+    ws = wb_catalog[lang]
     m = header_map(ws)
-    lst = []
     for row in ws.iter_rows(min_row=2, values_only=True):
-        song_id = get(row, m, 'id')
-        if song_id in (None, ''):
+        local_id = get(row, m, 'id')
+        name = get(row, m, 'name')
+        if local_id in (None, '') or name in (None, ''):
             continue
-        seconds = time_to_seconds(get(row, m, 'time'))
-        lst.append({
-            'id': normalize_id(song_id),
+        artist = str(get(row, m, 'artist', default='') or '')
+        norm_id = normalize_id(local_id)
+        entry = {'artist': artist, 'language': lang, 'name': str(name).strip()}
+        catalog_by_id[norm_id] = entry
+        name_only_lookup.setdefault(clean_name(name), entry)
+
+# ========== 3. song_records.xlsx（演出紀錄）：一個工作表 = 一個年份 ==========
+wb_records = openpyxl.load_workbook(RECORDS_PATH, data_only=True)
+songs = {}
+unmatched = []
+
+for sheet_name in wb_records.sheetnames:
+    if sheet_name in ('歌曲彙總',):
+        continue  # 這個分頁只是 Excel 裡用來做下拉選單的彙總清單，不是演出紀錄本體，跳過
+    ws = wb_records[sheet_name]
+    m = header_map(ws)
+    for row in ws.iter_rows(min_row=2, values_only=True):
+        record_id = get(row, m, 'id')
+        song_name = get(row, m, 'song_name')
+        if record_id in (None, '') or song_name in (None, ''):
+            continue
+
+        local_song_id = get(row, m, 'song_id')
+        norm_song_id = normalize_id(local_song_id)
+
+        catalog_entry = catalog_by_id.get(norm_song_id)
+        if catalog_entry is None:
+            # 保險：萬一是還沒改成新格式 id 的舊資料，退回用歌名比對
+            catalog_entry = name_only_lookup.get(clean_name(song_name))
+
+        if catalog_entry is None:
+            unmatched.append((sheet_name, record_id, song_name))
+            artist, language = '', '未分類'
+        else:
+            artist, language = catalog_entry['artist'], catalog_entry['language']
+
+        time_val = get(row, m, 'time')
+        seconds = time_to_seconds(time_val)
+
+        entry = {
+            'id': normalize_id(record_id),
             'streamId': normalize_id(get(row, m, 'stream_id')),
             'timeSeconds': seconds,
             'timeDisplay': seconds_to_display(seconds) if seconds else '',
-            'name': str(get(row, m, 'name', default='') or ''),
-            'artist': str(get(row, m, 'artist', default='') or ''),
+            'name': str(song_name).strip(),
+            'artist': artist,
+            'feat': str(get(row, m, 'feat', default='') or ''),
             'tags': parse_tags(get(row, m, 'tags', 'tag')),
             'note': str(get(row, m, 'note', default='') or ''),
             'url': str(get(row, m, 'url', default='') or ''),
-        })
-    songs[sheet_name] = lst
+        }
+        songs.setdefault(language, []).append(entry)
 
 with open(os.path.join(BASE_DIR, 'songs.json'), 'w', encoding='utf-8') as f:
     json.dump({'songs': songs}, f, ensure_ascii=False)
 
 print('轉換完成：streams.json, songs.json')
+if unmatched:
+    print(f'⚠️ 有 {len(unmatched)} 筆演出紀錄在目錄裡找不到對應的歌曲（已歸類到「未分類」）：')
+    for sheet_name, record_id, song_name in unmatched:
+        print(f'  - {sheet_name} 分頁 第 {record_id} 筆：{song_name}')

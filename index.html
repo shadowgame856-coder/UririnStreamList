@@ -410,8 +410,8 @@ function render(){
       // 不論哪一種，只要能解析出可播放的網址，都會顯示播放按鈕
       const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
       const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
-      const artistNames = (isDuetStandalone && s.artist) ? s.artist.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
-      const subLabel = stream ? (stream.title || '') : (artistNames.length ? artistNames.join('、') : '');
+      const featNames = (isDuetStandalone && s.feat) ? s.feat.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
+      const subLabel = stream ? (stream.title || '') : (featNames.length ? featNames.join('、') : '');
       return `<div class="song-row">
         <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
         <div class="song-badges">
