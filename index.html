@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-Hant">
+<html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -254,6 +254,7 @@ function sortedYears(){
 
 let activeYear = null; // 資料載入完成後會設成最新年份
 let activeStreamTag = null;
+const expandedStreams = new Set(); // 記錄哪些直播的歌單目前是展開狀態
 
 const contentEl = document.getElementById('content');
 const statsLine = document.getElementById('statsLine');
@@ -435,20 +436,25 @@ window.goToSongPage = goToSongPage;
 function renderPagination(totalPages){
   if(totalPages <= 1) return '';
   const p = currentPage;
+  const isMobile = window.innerWidth <= 520;
+
   let pages = [1];
   for(let i = p - 1; i <= p + 1; i++){ if(i > 1 && i < totalPages) pages.push(i); }
   if(totalPages > 1) pages.push(totalPages);
   pages = [...new Set(pages)].sort((a,b) => a - b);
 
+  const prevLabel = isMobile ? '‹' : '‹ 上一頁';
+  const nextLabel = isMobile ? '›' : '下一頁 ›';
+
   let html = `<div class="pagination">`;
-  html += `<button class="page-btn" onclick="goToSongPage(${p - 1})" ${p <= 1 ? 'disabled' : ''}>‹ 上一頁</button>`;
+  html += `<button class="page-btn" onclick="goToSongPage(${p - 1})" ${p <= 1 ? 'disabled' : ''}>${prevLabel}</button>`;
   let prev = 0;
   for(const num of pages){
     if(prev && num - prev > 1) html += `<span class="page-info">…</span>`;
     html += `<button class="page-btn${num === p ? ' active' : ''}" onclick="goToSongPage(${num})">${num}</button>`;
     prev = num;
   }
-  html += `<button class="page-btn" onclick="goToSongPage(${p + 1})" ${p >= totalPages ? 'disabled' : ''}>下一頁 ›</button>`;
+  html += `<button class="page-btn" onclick="goToSongPage(${p + 1})" ${p >= totalPages ? 'disabled' : ''}>${nextLabel}</button>`;
   html += `</div>`;
   return html;
 }
@@ -514,6 +520,22 @@ function setStreamTag(tag){
   renderStreamsView();
 }
 window.setStreamTag = setStreamTag;
+
+function renderSongRow(s){
+  return `<div class="song-row">
+    <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+    <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+    <div class="song-sub">${escapeHtml(s.artist || '')}</div>
+    ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+  </div>`;
+}
+
+function toggleStreamExpand(streamId){
+  if(expandedStreams.has(streamId)) expandedStreams.delete(streamId);
+  else expandedStreams.add(streamId);
+  renderStreamsView();
+}
+window.toggleStreamExpand = toggleStreamExpand;
 
 function songsForStream(streamId){
   const result = [];
@@ -584,18 +606,19 @@ function renderStreamsView(){
       ${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       ${hostName ? `<div class="song-sub" style="text-align:left;margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
       ${guestsDisplay ? `<div class="song-sub" style="text-align:left;margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}
-      <div class="song-list">` +
+      ` +
       (isRestrictedStream(stream)
-        ? `<div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div>`
+        ? `<div class="song-list"><div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div></div>`
         : (songs.length === 0
           ? ''
-          : songs.map(s => `<div class="song-row">
-              <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-              <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
-              <div class="song-sub">${escapeHtml(s.artist || '')}</div>
-              ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
-            </div>`).join(''))) +
-      `</div>
+          : (songs.length === 1
+            ? `<div class="song-list">${renderSongRow(songs[0])}</div>`
+            : (() => {
+                const expanded = expandedStreams.has(stream.id);
+                return `<button class="chip" style="margin-bottom:10px;" onclick="toggleStreamExpand('${stream.id}')">${expanded ? '▲ 收合' : '▶ 展開'} 共 ${songs.length} 首歌曲</button>` +
+                  (expanded ? `<div class="song-list">${songs.map(s => renderSongRow(s)).join('')}</div>` : '');
+              })()))) +
+      `
     </div>`;
   }
   html += `</div>`;
