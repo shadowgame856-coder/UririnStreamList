@@ -255,6 +255,7 @@ function sortedYears(){
 let activeYear = null; // 資料載入完成後會設成最新年份
 let activeStreamTag = null;
 const expandedStreams = new Set(); // 記錄哪些直播的歌單目前是展開狀態
+const expandedSongs = new Set();   // 記錄好聽音樂頁籤裡哪些歌曲（依 catalogId）目前是展開狀態
 
 const contentEl = document.getElementById('content');
 const statsLine = document.getElementById('statsLine');
@@ -329,7 +330,7 @@ function switchView(view){
 }
 window.switchView = switchView;
 
-// ================= 點歌本（歌單）=================
+// ================= 好聽音樂（歌單）=================
 function renderLangBar(){
   let html = `<span class="chip${activeLang===null?' active':''}" onclick="setLang(null)">全部</span>`;
   for(const lang of LANGUAGES){
@@ -357,12 +358,48 @@ function getAllSongsFlat(){
   for(const lang of langs){
     for(const song of SONGS[lang]){
       const stream = STREAMS[song.streamId];
-      if(isRestrictedStream(stream)) continue; // 會限場次的曲目不進點歌本，避免外流
+      if(isRestrictedStream(stream)) continue; // 會限場次的曲目不進好聽音樂頁籤，避免外流
       result.push({ ...song, lang });
     }
   }
   return result;
 }
+
+function songInstanceSortKey(s){
+  const stream = STREAMS[s.streamId];
+  if(stream && stream.date) return stream.date; // 'YYYY-MM-DD' 字串本身就能直接比大小
+  // 沒有對應直播（沒有日期可用）時，退回用紀錄自己的 id 當新舊的近似依據
+  const n = parseFloat(s.id);
+  return isNaN(n) ? '' : String(n).padStart(10, '0');
+}
+
+function renderSongRowSingle(s){
+  const stream = STREAMS[s.streamId];
+  // 屬於某場直播的歌曲：副標顯示所屬直播標題
+  // 沒有掛在任何直播下、但標了「合唱」的歌曲：副標顯示 feat（多位用「、」分隔）
+  // 其餘沒有對應直播的歌曲：不顯示副標
+  // 不論哪一種，只要能解析出可播放的網址，都會顯示播放按鈕
+  const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
+  const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
+  const featNames = (isDuetStandalone && s.feat) ? s.feat.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
+  const subLabel = stream ? (stream.title || '') : (featNames.length ? featNames.join('、') : '');
+  return `<div class="song-row">
+    <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+    <div class="song-badges">
+      <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+      ${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+    </div>
+    ${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
+    ${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+  </div>`;
+}
+
+function toggleSongExpand(catalogId){
+  if(expandedSongs.has(catalogId)) expandedSongs.delete(catalogId);
+  else expandedSongs.add(catalogId);
+  render();
+}
+window.toggleSongExpand = toggleSongExpand;
 
 function render(){
   renderLangBar();
@@ -380,12 +417,20 @@ function render(){
     });
   }
 
-  songs.sort((a,b) => a.name.localeCompare(b.name, 'zh-Hant'));
+  // 依 catalogId（目錄裡歌曲的唯一編號）分組：同一首歌唱過好幾次，合併成一張卡片
+  const groupsMap = new Map();
+  for(const s of songs){
+    const key = s.catalogId || `${s.lang}::${s.name}`; // 保險：萬一缺 catalogId 就退回用語言+歌名分組
+    if(!groupsMap.has(key)) groupsMap.set(key, []);
+    groupsMap.get(key).push(s);
+  }
+  let groups = [...groupsMap.values()];
+  groups.sort((a,b) => a[0].name.localeCompare(b[0].name, 'zh-Hant'));
 
   statsLine.textContent = '';
-  songsStatsLine.textContent = `共 ${songs.length} 首`;
+  songsStatsLine.textContent = `共 ${groups.length} 首`;
 
-  if(songs.length === 0){
+  if(groups.length === 0){
     contentEl.innerHTML = `<div class="empty-state">
       <div class="big">沒有符合的結果</div>
       <div>換個關鍵字或分類試試看</div>
@@ -393,34 +438,40 @@ function render(){
     return;
   }
 
-  const totalPages = Math.max(1, Math.ceil(songs.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
   if(currentPage > totalPages) currentPage = totalPages;
   if(currentPage < 1) currentPage = 1;
   const start = (currentPage - 1) * PAGE_SIZE;
-  const pageSongs = songs.slice(start, start + PAGE_SIZE);
+  const pageGroups = groups.slice(start, start + PAGE_SIZE);
 
   contentEl.innerHTML =
     renderPagination(totalPages) +
     `<div class="song-list">` +
-    pageSongs.map(s => {
-      const stream = STREAMS[s.streamId];
-      // 屬於某場直播的歌曲：副標顯示所屬直播標題
-      // 沒有掛在任何直播下、但標了「合唱」的歌曲：副標顯示 artist（多位用「、」分隔）
-      // 其餘沒有對應直播的歌曲：不顯示副標
-      // 不論哪一種，只要能解析出可播放的網址，都會顯示播放按鈕
-      const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
-      const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
-      const featNames = (isDuetStandalone && s.feat) ? s.feat.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
-      const subLabel = stream ? (stream.title || '') : (featNames.length ? featNames.join('、') : '');
-      return `<div class="song-row">
-        <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+    pageGroups.map(group => {
+      if(group.length === 1) return renderSongRowSingle(group[0]);
+
+      const first = group[0];
+      const catalogId = first.catalogId || `${first.lang}::${first.name}`;
+      const expanded = expandedSongs.has(catalogId);
+      const allTags = [...new Set(group.flatMap(s => s.tags || []))];
+
+      let html = `<div class="song-row" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
+        <div class="song-name">${escapeHtml(first.name)}</div>
         <div class="song-badges">
-          <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
-          ${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+          <span class="song-lang-badge">${escapeHtml(first.lang)}</span>
+          ${allTags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('')}
         </div>
-        ${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
-        ${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+        <div class="song-sub">${escapeHtml(first.artist || '')}</div>
+        <span class="chip" style="padding:5px 12px;font-size:.8rem;">共 ${group.length} 次 ${expanded ? '▲' : '▶'}</span>
       </div>`;
+
+      if(expanded){
+        const sorted = [...group].sort((a,b) => songInstanceSortKey(b).localeCompare(songInstanceSortKey(a)));
+        html += `<div style="padding-left:20px;border-left:2px solid var(--line);margin:0 0 8px 20px;">` +
+          sorted.map(s => renderSongRowSingle(s)).join('') +
+          `</div>`;
+      }
+      return html;
     }).join('') +
     `</div>` +
     renderPagination(totalPages);
@@ -461,7 +512,7 @@ function renderPagination(totalPages){
 
 searchInput.addEventListener('input', ()=>{ currentPage = 1; render(); });
 
-// ================= 直播列表（依年份分頁）=================
+// ================= 直播紀錄（依年份分頁）=================
 function setYear(year){
   activeYear = year;
   renderStreamsView();

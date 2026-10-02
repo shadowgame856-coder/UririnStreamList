@@ -1,5 +1,5 @@
 """
-把 streams.xlsx（歌回場次）＋ songs.xlsx（歌曲目錄）＋ song_records.xlsx（演出紀錄）
+把 streams.xlsx（直播場次）＋ songs.xlsx（歌曲目錄）＋ song_records.xlsx（演出紀錄）
 轉成網站要讀的 streams.json / songs.json
 用法：python convert_xlsx_to_json.py
 預期這三個 xlsx 檔案跟這支程式放在同一個資料夾（repo 根目錄）
@@ -124,7 +124,7 @@ with open(os.path.join(BASE_DIR, 'streams.json'), 'w', encoding='utf-8') as f:
     json.dump({'streams': streams, 'streamYears': stream_years}, f, ensure_ascii=False)
 
 # ========== 2. songs.xlsx（目錄）：一個工作表 = 一個語言 ==========
-# 目錄的 id 現在用語言前綴格式（例如 zh1、ja1、en1），本身已經全域唯一。
+# 目錄的 id 用語言前綴格式（例如 zh1、ja1、en1），本身已經全域唯一，直接用 id 查就好。
 wb_catalog = openpyxl.load_workbook(CATALOG_PATH, data_only=True)
 catalog_by_id = {}     # norm_id -> {artist, language, name}  ← 主要查找鍵
 name_only_lookup = {}  # clean_name -> {artist, language}（id 對不到時的備援，例如舊格式的數字 id）
@@ -182,6 +182,7 @@ for sheet_name in wb_records.sheetnames:
 
         entry = {
             'id': normalize_id(record_id),
+            'catalogId': norm_song_id,
             'streamId': normalize_id(get(row, m, 'stream_id')),
             'timeSeconds': seconds,
             'timeDisplay': seconds_to_display(seconds) if seconds else '',
