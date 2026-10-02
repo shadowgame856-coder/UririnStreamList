@@ -345,7 +345,9 @@ function setLang(lang){
 window.setLang = setLang;
 
 function isRestrictedStream(stream){
-  return !!stream && (stream.tags||[]).some(t => t.toLowerCase() === '會限');
+  if(!stream) return false;
+  const tags = (stream.tags||[]).map(t => t.toLowerCase());
+  return tags.includes('會限') && tags.includes('歌回');
 }
 
 function getAllSongsFlat(){
@@ -401,10 +403,14 @@ function render(){
     `<div class="song-list">` +
     pageSongs.map(s => {
       const stream = STREAMS[s.streamId];
-      // 屬於某場直播的歌曲：只顯示是哪場直播，不放播放按鈕
-      // 沒有掛在任何直播下的歌曲：不特別顯示來源，但可以播放
-      const subLabel = stream ? (stream.title || '') : '';
+      // 屬於某場直播的歌曲：副標顯示所屬直播標題
+      // 沒有掛在任何直播下、但標了「合唱」的歌曲：副標顯示 artist（多位用「、」分隔）
+      // 其餘沒有對應直播的歌曲：不顯示副標
+      // 不論哪一種，只要能解析出可播放的網址，都會顯示播放按鈕
       const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
+      const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
+      const artistNames = (isDuetStandalone && s.artist) ? s.artist.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
+      const subLabel = stream ? (stream.title || '') : (artistNames.length ? artistNames.join('、') : '');
       return `<div class="song-row">
         <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
         <div class="song-badges">
