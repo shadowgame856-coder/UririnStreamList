@@ -5,6 +5,7 @@ on:
     paths:
       - 'streams.xlsx'
       - 'songs.xlsx'
+      - 'song_records.xlsx'
       - 'convert_xlsx_to_json.py'
   workflow_dispatch: {}
 
