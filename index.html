@@ -87,6 +87,7 @@
     padding:11px 16px; border-bottom:1px solid var(--line);
   }
   .song-row:last-child{ border-bottom:none; }
+  .song-toggle-row:hover{ border-color:var(--gold); color:var(--text); }
   .song-name{ font-weight:500; flex:1; min-width:0; }
   .song-sub{ color:var(--muted); font-size:.86rem; flex-shrink:0; max-width:38%; text-align:right; }
   .song-lang-badge{
@@ -671,9 +672,8 @@ function renderStreamsView(){
     } else if(songs.length === 1){
       songsSectionHtml = `<div class="song-list">${renderSongRow(songs[0])}</div>`;
     } else if(songs.length > 1){
-      const toggleRow = `<div class="song-row" style="cursor:pointer;" onclick="toggleStreamExpand('${stream.id}')">
-        <div class="song-sub" style="text-align:left;">共 ${songs.length} 首歌曲</div>
-        <span class="song-lang-badge">${expanded ? '▲' : '▶'}</span>
+      const toggleRow = `<div class="song-row song-toggle-row" style="cursor:pointer;" onclick="toggleStreamExpand('${stream.id}')">
+        <div class="song-sub" style="text-align:left;">${expanded ? '▲ 收合' : '▶ 展開'} 共 ${songs.length} 首歌曲</div>
       </div>`;
       songsSectionHtml = `<div class="song-list">${toggleRow}${expanded ? songs.map(s => renderSongRow(s)).join('') : ''}</div>`;
     }
