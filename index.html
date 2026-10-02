@@ -366,14 +366,12 @@ function getAllSongsFlat(){
 }
 
 function songInstanceSortKey(s){
-  const stream = STREAMS[s.streamId];
-  if(stream && stream.date) return stream.date; // 'YYYY-MM-DD' 字串本身就能直接比大小
-  // 沒有對應直播（沒有日期可用）時，退回用紀錄自己的 id 當新舊的近似依據
+  // 直接用 song_records 自己的 id 排序（數字越大代表越晚新增的紀錄）
   const n = parseFloat(s.id);
-  return isNaN(n) ? '' : String(n).padStart(10, '0');
+  return isNaN(n) ? 0 : n;
 }
 
-function renderSongRowSingle(s){
+function renderSongRowSingle(s, hideLangBadge){
   const stream = STREAMS[s.streamId];
   // 屬於某場直播的歌曲：副標顯示所屬直播標題
   // 沒有掛在任何直播下、但標了「合唱」的歌曲：副標顯示 feat（多位用「、」分隔）
@@ -386,7 +384,7 @@ function renderSongRowSingle(s){
   return `<div class="song-row">
     <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
     <div class="song-badges">
-      <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+      ${hideLangBadge ? '' : `<span class="song-lang-badge">${escapeHtml(s.lang)}</span>`}
       ${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
     </div>
     ${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
@@ -453,22 +451,20 @@ function render(){
       const first = group[0];
       const catalogId = first.catalogId || `${first.lang}::${first.name}`;
       const expanded = expandedSongs.has(catalogId);
-      const allTags = [...new Set(group.flatMap(s => s.tags || []))];
 
       let html = `<div class="song-row" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
         <div class="song-name">${escapeHtml(first.name)}</div>
         <div class="song-badges">
           <span class="song-lang-badge">${escapeHtml(first.lang)}</span>
-          ${allTags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('')}
         </div>
         <div class="song-sub">${escapeHtml(first.artist || '')}</div>
         <span class="chip" style="padding:5px 12px;font-size:.8rem;">共 ${group.length} 次 ${expanded ? '▲' : '▶'}</span>
       </div>`;
 
       if(expanded){
-        const sorted = [...group].sort((a,b) => songInstanceSortKey(b).localeCompare(songInstanceSortKey(a)));
+        const sorted = [...group].sort((a,b) => songInstanceSortKey(b) - songInstanceSortKey(a));
         html += `<div style="padding-left:20px;border-left:2px solid var(--line);margin:0 0 8px 20px;">` +
-          sorted.map(s => renderSongRowSingle(s)).join('') +
+          sorted.map(s => renderSongRowSingle(s, true)).join('') +
           `</div>`;
       }
       return html;
