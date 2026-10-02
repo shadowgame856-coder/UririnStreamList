@@ -91,8 +91,13 @@
   .song-sub{ color:var(--muted); font-size:.86rem; flex-shrink:0; max-width:38%; text-align:right; }
   .song-lang-badge{
     color:var(--rose); font-size:.72rem; border:1px solid var(--line); border-radius:5px;
-    padding:1px 6px; flex-shrink:0;
+    padding:1px 6px; flex-shrink:0; white-space:nowrap;
   }
+  .song-badges{
+    display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
+    -ms-overflow-style:none;
+  }
+  .song-badges::-webkit-scrollbar{ display:none; }
   .song-play-btn{
     background:var(--gold); color:#22190a; border:none; border-radius:6px;
     padding:5px 11px; font-size:.78rem; font-weight:700; cursor:pointer; flex-shrink:0;
@@ -181,7 +186,7 @@
   <div id="mainApp" style="display:none;">
   <div class="view-tabs">
     <button class="view-tab active" id="tabSongs" onclick="switchView('songs')">好聽音樂</button>
-    <button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播列表</button>
+    <button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播紀錄</button>
   </div>
 
   <div class="stats" id="statsLine"></div>
@@ -189,10 +194,10 @@
   <div id="playerPanel" class="player-panel" style="display:none;">
     <div class="player-panel-head">
       <span class="player-panel-title" id="playerPanelTitle"></span>
-      <button class="btn ghost" onclick="closePlayer()">✕ 關閉播放器</button>
+      <button class="btn ghost" onclick="closePlayer()">✕</button>
     </div>
     <div class="player-frame-wrap">
-      <iframe id="playerIframe" src="" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+      <iframe id="playerIframe" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
     </div>
   </div>
 
@@ -226,7 +231,18 @@ let LANGUAGES = [];
 let currentView = 'songs';
 let activeLang = null;
 let currentPage = 1;
-const PAGE_SIZE = 50;
+function getPageSize(){
+  return window.innerWidth <= 520 ? 5 : 15;
+}
+let PAGE_SIZE = getPageSize();
+window.addEventListener('resize', () => {
+  const next = getPageSize();
+  if(next !== PAGE_SIZE){
+    PAGE_SIZE = next;
+    currentPage = 1;
+    if(currentView === 'songs') render();
+  }
+});
 
 function sortedYears(){
   return [...STREAM_YEARS].sort((a,b) => {
@@ -391,8 +407,10 @@ function render(){
       const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
       return `<div class="song-row">
         <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-        <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
-        ${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+        <div class="song-badges">
+          <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+          ${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+        </div>
         ${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
         ${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
       </div>`;
