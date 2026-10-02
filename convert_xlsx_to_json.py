@@ -124,7 +124,7 @@ with open(os.path.join(BASE_DIR, 'streams.json'), 'w', encoding='utf-8') as f:
     json.dump({'streams': streams, 'streamYears': stream_years}, f, ensure_ascii=False)
 
 # ========== 2. songs.xlsx（目錄）：一個工作表 = 一個語言 ==========
-# 目錄的 id 用語言前綴格式（例如 zh1、ja1、en1），本身已經全域唯一。
+# 目錄的 id 現在用語言前綴格式（例如 zh1、ja1、en1），本身已經全域唯一。
 wb_catalog = openpyxl.load_workbook(CATALOG_PATH, data_only=True)
 catalog_by_id = {}     # norm_id -> {artist, language, name}  ← 主要查找鍵
 name_only_lookup = {}  # clean_name -> {artist, language}（id 對不到時的備援，例如舊格式的數字 id）
@@ -145,7 +145,7 @@ for lang in wb_catalog.sheetnames:
 
 # ========== 3. song_records.xlsx（演出紀錄）：一個工作表 = 一個年份 ==========
 wb_records = openpyxl.load_workbook(RECORDS_PATH, data_only=True)
-songs = {}
+songs = {lang: [] for lang in wb_catalog.sheetnames}  # 先照目錄的分頁順序建好空清單，順序才會跟 Excel 一致
 unmatched = []
 
 for sheet_name in wb_records.sheetnames:
@@ -176,12 +176,16 @@ for sheet_name in wb_records.sheetnames:
         time_val = get(row, m, 'time')
         seconds = time_to_seconds(time_val)
 
+        # 歌名一律以目錄裡的乾淨名稱為準，不直接沿用 song_records 自己存的文字
+        # （Excel 下拉選單選到的文字可能帶 id 當區分標籤，例如「大笑之歌（zh1）」，不能直接拿來顯示）
+        display_name = catalog_entry['name'] if catalog_entry else str(song_name).strip()
+
         entry = {
             'id': normalize_id(record_id),
             'streamId': normalize_id(get(row, m, 'stream_id')),
             'timeSeconds': seconds,
             'timeDisplay': seconds_to_display(seconds) if seconds else '',
-            'name': str(song_name).strip(),
+            'name': display_name,
             'artist': artist,
             'feat': str(get(row, m, 'feat', default='') or ''),
             'tags': parse_tags(get(row, m, 'tags', 'tag')),
