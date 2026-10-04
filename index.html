@@ -315,7 +315,7 @@ function playSong(lang, songId){
   const iframe = document.getElementById('playerIframe');
   const title = document.getElementById('playerPanelTitle');
   const contextLabel = resolveSongContextLabel(song);
-  iframe.src = `https://www.youtube.com/embed/${videoId}?start=${song.timeSeconds}&autoplay=1`;
+  iframe.src = `https://www.youtube.com/embed/${videoId}?start=${song.timeSeconds}&autoplay=1&enablejsapi=1`;
   title.textContent = contextLabel ? `${contextLabel} － ${song.name}` : song.name;
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
