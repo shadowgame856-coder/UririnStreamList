@@ -319,6 +319,17 @@ function playSong(lang, songId){
   title.textContent = contextLabel ? `${contextLabel} － ${song.name}` : song.name;
   panel.style.display = 'block';
   panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+  // 送出 GA 自訂事件：記錄哪首歌被點播（GA 的自動影片追蹤抓不到動態更換的播放器，所以改由這裡主動送）
+  if(typeof gtag === 'function'){
+    const stream = STREAMS[song.streamId];
+    gtag('event', 'play_song', {
+      song_name: song.name,
+      song_id: song.catalogId || '',
+      song_language: lang,
+      stream_title: stream ? (stream.title || '') : '非直播',
+    });
+  }
 }
 window.playSong = playSong;
 
