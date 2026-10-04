@@ -492,8 +492,16 @@ function closePlayer(){
 window.closePlayer = closePlayer;
 
 // ================= 頁籤切換 =================
+// 瀏覽器分頁標題：「網站名稱 | 目前頁籤」，頁籤名稱直接讀按鈕文字，改頁籤名稱時會自動跟著變
+const SITE_TITLE = '幽李鈴 Uririn';
+function updateDocumentTitle(){
+	const tab = document.getElementById(currentView === 'songs' ? 'tabSongs' : 'tabStreams');
+	document.title = `${SITE_TITLE} | ${tab.textContent.trim()}`;
+}
+
 function switchView(view){
 	currentView = view;
+	updateDocumentTitle();
 	document.getElementById('tabSongs').classList.toggle('active', view === 'songs');
 	document.getElementById('tabStreams').classList.toggle('active', view === 'streams');
 	document.getElementById('songsControls').style.display = view === 'songs' ? 'block' : 'none';
@@ -941,6 +949,7 @@ async function init(){
 		await loadAllData();
 		document.getElementById('loadingState').style.display = 'none';
 		document.getElementById('mainApp').style.display = ''; // 交給 style.css 決定版面（電腦版為左右兩欄）
+		updateDocumentTitle();
 		render();
 	}catch(e){
 		document.getElementById('loadingState').style.display = 'none';
