@@ -7,229 +7,89 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --bg: #14121f;
-    --surface: #1e1b2e;
-    --surface-2: #26223a;
-    --line: #362f4d;
-    --text: #f2eee6;
-    --muted: #948fa8;
-    --gold: #e3b158;
-    --rose: #d97a93;
-  }
-  *{box-sizing:border-box;}
-  html,body{margin:0;padding:0;}
-  body{
-    background:var(--bg);
-    color:var(--text);
-    font-family:'Noto Sans TC', sans-serif;
-    line-height:1.6;
-    min-height:100vh;
-  }
-  .wrap{
-    max-width:760px;
-    margin:0 auto;
-    padding:48px 20px 100px;
-  }
-  h1{
-    font-family:'Noto Serif TC', serif;
-    font-weight:700; font-size:2rem; margin:0 0 6px; letter-spacing:.02em;
-  }
-  .subtitle{ color:var(--muted); font-size:.95rem; margin:0 0 4px; }
-  .stats{ color:var(--gold); font-size:.88rem; margin-top:6px; }
-
-  .view-tabs{ display:flex; gap:8px; margin-top:24px; border-bottom:1px solid var(--line); }
-  .view-tab{
-    background:transparent; border:none; color:var(--muted); font-family:inherit;
-    font-size:.95rem; padding:10px 4px; cursor:pointer; position:relative; margin-right:14px;
-  }
-  .view-tab:hover{ color:var(--text); }
-  .view-tab.active{ color:var(--gold); font-weight:700; }
-  .view-tab.active::after{
-    content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--gold);
-  }
-
-  .searchbar{ margin-top:22px; }
-  .searchbar input{
-    width:100%; background:var(--surface); border:1px solid var(--line);
-    color:var(--text); border-radius:8px; padding:12px 14px;
-    font-size:1rem; font-family:inherit;
-  }
-  .searchbar input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
-  .searchbar input::placeholder{ color:var(--muted); }
-
-  .chip-bar{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
-  .chip{
-    background:var(--surface); border:1px solid var(--line); color:var(--muted);
-    font-size:.86rem; padding:6px 14px; border-radius:999px; cursor:pointer; font-family:inherit;
-  }
-  .chip:hover{ border-color:var(--gold); color:var(--text); }
-  .chip.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
-
-  .year-pager{ display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
-  .year-btn{
-    background:var(--surface); border:1px solid var(--line); color:var(--text);
-    font-size:1rem; padding:8px 18px; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:500;
-  }
-  .year-btn:hover{ border-color:var(--gold); color:var(--gold); }
-  .year-btn.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
-
-  .song-list{
-    margin-top:20px;
-    background:var(--surface);
-    border:1px solid var(--line);
-    border-radius:10px;
-    overflow:hidden;
-  }
-  .song-row{
-    display:flex; align-items:baseline; gap:12px;
-    padding:11px 16px; border-bottom:1px solid var(--line);
-  }
-  .song-row:last-child{ border-bottom:none; }
-  .song-name{ font-weight:500; flex:1; min-width:0; }
-  .song-sub{ color:var(--muted); font-size:.86rem; flex-shrink:0; max-width:38%; text-align:right; }
-  .song-lang-badge{
-    color:var(--rose); font-size:.72rem; border:1px solid var(--line); border-radius:5px;
-    padding:1px 6px; flex-shrink:0; white-space:nowrap;
-  }
-  .song-badges{
-    display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none;
-    -ms-overflow-style:none;
-  }
-  .song-badges::-webkit-scrollbar{ display:none; }
-  .song-play-btn{
-    background:var(--gold); color:#22190a; border:none; border-radius:6px;
-    padding:5px 11px; font-size:.78rem; font-weight:700; cursor:pointer; flex-shrink:0;
-    font-family:inherit;
-  }
-  .song-play-btn:hover{ filter:brightness(1.08); }
-
-  .pagination{
-    display:flex; align-items:center; justify-content:center; gap:8px;
-    margin-top:18px; flex-wrap:wrap;
-  }
-  .page-btn{
-    background:var(--surface); border:1px solid var(--line); color:var(--text);
-    border-radius:7px; padding:7px 13px; font-size:.88rem; cursor:pointer; font-family:inherit;
-  }
-  .page-btn:hover:not(:disabled){ border-color:var(--gold); color:var(--gold); }
-  .page-btn.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
-  .page-btn:disabled{ opacity:.35; cursor:default; }
-  .page-info{ color:var(--muted); font-size:.85rem; margin:0 4px; }
-
-  .player-panel{
-    background:var(--surface); border:1px solid var(--gold); border-radius:12px;
-    padding:14px; margin-top:22px;
-  }
-  .player-panel-head{
-    display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;
-  }
-  .player-panel-title{ color:var(--gold); font-size:.9rem; font-weight:700; }
-  .player-frame-wrap{
-    position:relative; width:100%; padding-bottom:56.25%; height:0;
-    border-radius:8px; overflow:hidden; background:#000;
-  }
-  .player-frame-wrap iframe{
-    position:absolute; top:0; left:0; width:100%; height:100%; border:0;
-  }
-  .btn.ghost{
-    background:transparent; border:1px solid var(--line); color:var(--muted);
-    border-radius:6px; padding:6px 10px; font-size:.8rem; cursor:pointer; font-family:inherit;
-  }
-  .btn.ghost:hover{ color:var(--rose); border-color:var(--rose); }
-
-  .stream-timeline{
-    position:relative; margin-top:24px; padding-left:26px; border-left:2px solid var(--line);
-  }
-  .stream-block{ position:relative; margin-bottom:36px; }
-  .stream-block::before{
-    content:''; position:absolute; left:-32px; top:6px;
-    width:11px; height:11px; border-radius:50%; background:var(--gold);
-    box-shadow:0 0 0 4px var(--bg);
-  }
-  .stream-block-date{ color:var(--gold); font-size:.85rem; font-weight:700; letter-spacing:.04em; }
-  .stream-block-title{
-    font-family:'Noto Serif TC', serif; font-weight:700; font-size:1.1rem; margin:2px 0 8px;
-  }
-  .stream-block-title a{ color:var(--text); text-decoration:none; border-bottom:1px solid var(--gold); }
-  .stream-block-title a:hover{ color:var(--gold); }
-  .stream-tags-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
-  .stream-tags-row .chip{ padding:3px 10px; font-size:.78rem; }
-
-  .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
-  .empty-state .big{
-    font-family:'Noto Serif TC', serif; font-size:1.25rem; color:var(--text); margin-bottom:8px;
-  }
-  .loading-state{ text-align:center; padding:80px 20px; color:var(--muted); }
-  .error-state{
-    background:#3a1f24; border:1px solid var(--rose); color:var(--text);
-    border-radius:10px; padding:20px; margin-top:24px; font-size:.9rem; line-height:1.8;
-  }
-  .error-state code{ background:var(--surface-2); padding:2px 6px; border-radius:4px; font-size:.85em; }
-
-  @media (max-width:520px){
-    .wrap{ padding:32px 14px 80px; }
-    .song-row{ flex-direction:column; align-items:flex-start; gap:4px; }
-    .song-sub{ max-width:100%; text-align:left; }
-  }
-</style>
+<link rel="stylesheet" href="style.css">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QP5S6ESL3K"></script>
 <script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
+	window.dataLayer = window.dataLayer || [];
+	function gtag(){dataLayer.push(arguments);}
+	gtag('js', new Date());
 
-  gtag('config', 'G-QP5S6ESL3K');
+	gtag('config', 'G-QP5S6ESL3K');
 </script>
 </head>
 <body>
 <div class="wrap">
-  <h1>幽李鈴 Uririn</h1>
-  <p class="subtitle"></p>
+	<h1>幽李鈴 Uririn</h1>
+	<p class="subtitle"></p>
 
-  <div id="loadingState" class="loading-state">正在讀取資料…</div>
-  <div id="errorState" style="display:none;"></div>
+	<div id="loadingState" class="loading-state">正在讀取資料…</div>
+	<div id="errorState" style="display:none;"></div>
 
-  <div id="mainApp" style="display:none;">
-  <div class="view-tabs">
-    <button class="view-tab active" id="tabSongs" onclick="switchView('songs')">好聽音樂</button>
-    <button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播紀錄</button>
-  </div>
+	<div id="mainApp" class="layout" style="display:none;">
+	<!-- 上方：頁籤、搜尋框、篩選（電腦版橫跨左右兩欄） -->
+	<div class="controls">
+		<div class="view-tabs">
+			<button class="view-tab active" id="tabSongs" onclick="switchView('songs')">好聽音樂</button>
+			<button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播紀錄</button>
+		</div>
 
-  <div class="stats" id="statsLine"></div>
+		<div class="stats" id="statsLine"></div>
 
-  <div id="playerPanel" class="player-panel" style="display:none;">
-    <div class="player-panel-head">
-      <span class="player-panel-title" id="playerPanelTitle"></span>
-      <button class="btn ghost" onclick="closePlayer()">✕</button>
-    </div>
-    <div class="player-frame-wrap">
-      <iframe id="playerIframe" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
-    </div>
-  </div>
+		<div id="songsControls">
+			<div class="searchbar">
+				<input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
+			</div>
+			<div class="stats" id="songsStatsLine"></div>
+			<div class="chip-bar" id="langBar"></div>
+		</div>
 
-  <div id="songsView">
-    <div class="searchbar">
-      <input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
-    </div>
-    <div class="stats" id="songsStatsLine"></div>
-    <div class="chip-bar" id="langBar"></div>
-    <div id="content"></div>
-  </div>
+		<div id="streamsControls" style="display:none;">
+			<div class="year-pager" id="yearPager"></div>
+			<div class="chip-bar month-bar" id="monthBar"></div>
+			<div class="searchbar">
+				<input type="text" id="streamSearchInput" placeholder="搜尋直播標題、來賓…">
+			</div>
+			<div class="stats" id="streamsStatsLine"></div>
+			<div class="chip-bar" id="streamTagBar"></div>
+		</div>
+	</div>
 
-  <div id="streamsView" style="display:none;">
-    <div class="year-pager" id="yearPager"></div>
-    <div class="searchbar">
-      <input type="text" id="streamSearchInput" placeholder="搜尋直播標題、來賓…">
-    </div>
-    <div class="stats" id="streamsStatsLine"></div>
-    <div class="chip-bar" id="streamTagBar"></div>
-    <div id="streamsContent"></div>
-  </div>
-  </div>
+	<!-- 左欄：播放器（電腦版固定在左側；手機／平板版播放時變成浮動視窗） -->
+	<aside class="player-column">
+		<div id="playerPanel" class="player-panel">
+			<div class="player-idle">
+				<div class="player-idle-icon">▶</div>
+				<div>點選歌曲的「▶ 播放」開始聆聽</div>
+			</div>
+			<div class="player-panel-head">
+				<span class="player-panel-title" id="playerPanelTitle"></span>
+				<button class="btn ghost" onclick="closePlayer()">✕</button>
+			</div>
+			<div class="player-frame-wrap">
+				<iframe id="playerIframe" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+			</div>
+		</div>
+	</aside>
+
+	<!-- 右欄：歌單／直播時間軸 -->
+	<main class="content-column">
+		<div id="songsView">
+			<div id="content"></div>
+		</div>
+		<div id="streamsView" style="display:none;">
+			<div id="streamsContent"></div>
+		</div>
+	</main>
+	</div>
 </div>
+
+<!-- 回到最上方：往下捲動一段距離後才出現 -->
+<button id="backToTop" class="back-to-top" onclick="scrollToTop()" aria-label="回到最上方" title="回到最上方">
+	<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+		<polyline points="5 15 12 8 19 15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+	</svg>
+</button>
 
 <script>
 let STREAMS = {};        // { id: {id,year,date,title,url,tags} }
@@ -240,29 +100,32 @@ let LANGUAGES = [];
 let currentView = 'songs';
 let activeLang = null;
 let currentPage = 1;
+// 手機版斷點，要跟 style.css 裡的 @media (max-width:767px) 保持一致
+const PHONE_MEDIA = window.matchMedia('(max-width:767px)');
+function isPhone(){
+	return PHONE_MEDIA.matches;
+}
 function getPageSize(){
-  return window.innerWidth <= 520 ? 5 : 15;
+	return isPhone() ? 5 : 15;
 }
 let PAGE_SIZE = getPageSize();
-window.addEventListener('resize', () => {
-  const next = getPageSize();
-  if(next !== PAGE_SIZE){
-    PAGE_SIZE = next;
-    currentPage = 1;
-    if(currentView === 'songs') render();
-  }
+PHONE_MEDIA.addEventListener('change', () => {
+	PAGE_SIZE = getPageSize();
+	currentPage = 1;
+	if(currentView === 'songs') render();
 });
 
 function sortedYears(){
-  return [...STREAM_YEARS].sort((a,b) => {
-    const na = parseInt(a, 10), nb = parseInt(b, 10);
-    if(!isNaN(na) && !isNaN(nb)) return nb - na;
-    return String(b).localeCompare(String(a));
-  });
+	return [...STREAM_YEARS].sort((a,b) => {
+		const na = parseInt(a, 10), nb = parseInt(b, 10);
+		if(!isNaN(na) && !isNaN(nb)) return nb - na;
+		return String(b).localeCompare(String(a));
+	});
 }
 
 let activeYear = null; // 資料載入完成後會設成最新年份
 let activeStreamTag = null;
+let activeMonth = null; // 直播紀錄的月份篩選，null＝全部
 const expandedStreams = new Set(); // 記錄哪些直播的歌單目前是展開狀態
 const expandedSongs = new Set();   // 記錄好聽音樂頁籤裡哪些歌曲（依 catalogId）目前是展開狀態
 
@@ -274,483 +137,622 @@ const searchInput = document.getElementById('searchInput');
 const langBarEl = document.getElementById('langBar');
 
 function escapeHtml(str){
-  return (str||'').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
+	return (str||'').replace(/[&<>"']/g, s => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[s]));
 }
 
 function extractYouTubeId(url){
-  if(!url) return null;
-  try{
-    const u = new URL(url);
-    const host = u.hostname.replace('www.', '');
-    if(host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
-    if(host === 'youtube.com' || host === 'm.youtube.com'){
-      if(u.pathname === '/watch') return u.searchParams.get('v');
-      if(u.pathname.startsWith('/live/')) return u.pathname.split('/')[2];
-      if(u.pathname.startsWith('/embed/')) return u.pathname.split('/')[2];
-    }
-    return null;
-  }catch(e){ return null; }
+	if(!url) return null;
+	try{
+		const u = new URL(url);
+		const host = u.hostname.replace('www.', '');
+		if(host === 'youtu.be') return u.pathname.slice(1).split('/')[0] || null;
+		if(host === 'youtube.com' || host === 'm.youtube.com'){
+			if(u.pathname === '/watch') return u.searchParams.get('v');
+			if(u.pathname.startsWith('/live/')) return u.pathname.split('/')[2];
+			if(u.pathname.startsWith('/embed/')) return u.pathname.split('/')[2];
+		}
+		return null;
+	}catch(e){ return null; }
 }
-function isYouTubeUrl(url){ return extractYouTubeId(url) !== null; }
+// Twitch 網址解析：支援 VOD（/videos/123）、剪輯（clips.twitch.tv/xxx、/頻道/clip/xxx）、頻道直播（/頻道名稱）
+function extractTwitchInfo(url){
+	if(!url) return null;
+	try{
+		const u = new URL(url);
+		const host = u.hostname.replace(/^(www|m)\./, '');
+		const parts = u.pathname.split('/').filter(Boolean);
+		if(host === 'clips.twitch.tv') return parts[0] ? { type:'clip', id:parts[0] } : null;
+		if(host !== 'twitch.tv') return null;
+		if(parts[0] === 'videos' && parts[1]) return { type:'video', id:parts[1] };
+		if(parts[1] === 'clip' && parts[2]) return { type:'clip', id:parts[2] };
+		if(parts.length === 1) return { type:'channel', id:parts[0] };
+		return null;
+	}catch(e){ return null; }
+}
+
+function secondsToTwitchTime(sec){
+	sec = Math.max(0, Math.floor(sec || 0));
+	const h = Math.floor(sec / 3600);
+	const m = Math.floor((sec % 3600) / 60);
+	const s = sec % 60;
+	return `${h}h${m}m${s}s`;
+}
+
+// 依網址組出內嵌播放器的網址（目前支援 YouTube、Twitch）；不支援的平台（例如 X）回傳 null
+function buildEmbedSrc(url, seconds){
+	const youtubeId = extractYouTubeId(url);
+	if(youtubeId){
+		return `https://www.youtube.com/embed/${youtubeId}?start=${seconds || 0}&autoplay=1&enablejsapi=1`;
+	}
+	const twitch = extractTwitchInfo(url);
+	if(twitch){
+		// Twitch 規定要帶 parent（目前網站的網域），直接抓網址列的網域，換網域也不用改程式
+		const parent = encodeURIComponent(window.location.hostname);
+		if(twitch.type === 'video'){
+			const time = seconds ? `&time=${secondsToTwitchTime(seconds)}` : '';
+			return `https://player.twitch.tv/?video=${encodeURIComponent(twitch.id)}&parent=${parent}&autoplay=true${time}`;
+		}
+		if(twitch.type === 'channel'){
+			return `https://player.twitch.tv/?channel=${encodeURIComponent(twitch.id)}&parent=${parent}&autoplay=true`;
+		}
+		if(twitch.type === 'clip'){
+			return `https://clips.twitch.tv/embed?clip=${encodeURIComponent(twitch.id)}&parent=${parent}&autoplay=true`;
+		}
+	}
+	return null;
+}
+
+function isPlayableUrl(url){
+	return buildEmbedSrc(url, 0) !== null;
+}
 
 function resolveSongVideoUrl(song){
-  if(song.url) return song.url; // 歌曲自己就有網址，優先使用
-  const stream = STREAMS[song.streamId];
-  return stream ? stream.url : '';
+	if(song.url) return song.url; // 歌曲自己就有網址，優先使用
+	const stream = STREAMS[song.streamId];
+	return stream ? stream.url : '';
 }
 
 function resolveSongContextLabel(song){
-  if(song.url && !STREAMS[song.streamId]) return ''; // 沒有對應直播，就不顯示直播名稱
-  const stream = STREAMS[song.streamId];
-  return stream ? (stream.title || '直播') : '';
+	if(song.url && !STREAMS[song.streamId]) return ''; // 沒有對應直播，就不顯示直播名稱
+	const stream = STREAMS[song.streamId];
+	return stream ? (stream.title || '直播') : '';
+}
+
+// 打開播放器：顯示方式交給 style.css（電腦版固定在左欄、手機／平板版變成浮動視窗），不需要捲動畫面
+function openPlayer(embedSrc, titleText){
+	document.getElementById('playerIframe').src = embedSrc;
+	document.getElementById('playerPanelTitle').textContent = titleText;
+	document.getElementById('playerPanel').classList.add('is-active');
+	document.body.classList.add('player-open');
 }
 
 function playSong(lang, songId){
-  const song = (SONGS[lang] || []).find(s => s.id === songId);
-  if(!song) return;
-  const videoUrl = resolveSongVideoUrl(song);
-  const videoId = extractYouTubeId(videoUrl);
-  if(!videoId) return;
-  const panel = document.getElementById('playerPanel');
-  const iframe = document.getElementById('playerIframe');
-  const title = document.getElementById('playerPanelTitle');
-  const contextLabel = resolveSongContextLabel(song);
-  iframe.src = `https://www.youtube.com/embed/${videoId}?start=${song.timeSeconds}&autoplay=1&enablejsapi=1`;
-  title.textContent = contextLabel ? `${contextLabel} － ${song.name}` : song.name;
-  panel.style.display = 'block';
-  panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	const song = (SONGS[lang] || []).find(s => s.id === songId);
+	if(!song) return;
+	const embedSrc = buildEmbedSrc(resolveSongVideoUrl(song), song.timeSeconds);
+	if(!embedSrc) return;
+	const contextLabel = resolveSongContextLabel(song);
+	openPlayer(embedSrc, contextLabel ? `${contextLabel} － ${song.name}` : song.name);
 
-  // 送出 GA 自訂事件：記錄哪首歌被點播（GA 的自動影片追蹤抓不到動態更換的播放器，所以改由這裡主動送）
-  if(typeof gtag === 'function'){
-    const stream = STREAMS[song.streamId];
-    gtag('event', 'play_song', {
-      song_name: song.name,
-      song_id: song.catalogId || '',
-      song_language: lang,
-      stream_title: stream ? (stream.title || '') : '非直播',
-    });
-  }
+	// 送出 GA 自訂事件：記錄哪首歌被點播（GA 的自動影片追蹤抓不到動態更換的播放器，所以改由這裡主動送）
+	if(typeof gtag === 'function'){
+		const stream = STREAMS[song.streamId];
+		gtag('event', 'play_song', {
+			song_name: song.name,
+			song_id: song.catalogId || '',
+			song_language: lang,
+			stream_title: stream ? (stream.title || '') : '非直播',
+		});
+	}
 }
 window.playSong = playSong;
 
+// 直播紀錄：點直播標題時，在播放器播放整場直播（YouTube、Twitch）
+function playStream(streamId){
+	const stream = STREAMS[streamId];
+	if(!stream) return;
+	const embedSrc = buildEmbedSrc(stream.url, 0);
+	if(!embedSrc) return;
+	openPlayer(embedSrc, stream.title || '直播');
+
+	if(typeof gtag === 'function'){
+		gtag('event', 'play_stream', {
+			stream_title: stream.title || '',
+		});
+	}
+}
+window.playStream = playStream;
+
+// 直播標題：可內嵌的平台（YouTube、Twitch）點了在播放器播放；其他平台（例如 X）開新視窗
+// 可內嵌的連結仍保留 href，使用者還是可以按右鍵或中鍵在新分頁開啟原始網址
+function renderStreamTitleLink(stream){
+	const title = escapeHtml(stream.title || '直播連結');
+	if(!stream.url) return escapeHtml(stream.title || '未命名直播');
+	const href = escapeHtml(stream.url);
+	if(isPlayableUrl(stream.url)){
+		return `<a href="${href}" onclick="event.preventDefault();playStream('${stream.id}')">${title}</a>`;
+	}
+	return `<a href="${href}" target="_blank" rel="noopener">${title}</a>`;
+}
+
 function closePlayer(){
-  document.getElementById('playerIframe').src = '';
-  document.getElementById('playerPanel').style.display = 'none';
+	document.getElementById('playerIframe').src = '';
+	document.getElementById('playerPanel').classList.remove('is-active');
+	document.body.classList.remove('player-open');
 }
 window.closePlayer = closePlayer;
 
 // ================= 頁籤切換 =================
 function switchView(view){
-  currentView = view;
-  document.getElementById('tabSongs').classList.toggle('active', view === 'songs');
-  document.getElementById('tabStreams').classList.toggle('active', view === 'streams');
-  document.getElementById('songsView').style.display = view === 'songs' ? 'block' : 'none';
-  document.getElementById('streamsView').style.display = view === 'streams' ? 'block' : 'none';
-  if(view === 'songs') render(); else renderStreamsView();
+	currentView = view;
+	document.getElementById('tabSongs').classList.toggle('active', view === 'songs');
+	document.getElementById('tabStreams').classList.toggle('active', view === 'streams');
+	document.getElementById('songsControls').style.display = view === 'songs' ? 'block' : 'none';
+	document.getElementById('streamsControls').style.display = view === 'streams' ? 'block' : 'none';
+	document.getElementById('songsView').style.display = view === 'songs' ? 'block' : 'none';
+	document.getElementById('streamsView').style.display = view === 'streams' ? 'block' : 'none';
+	if(view === 'songs') render(); else renderStreamsView();
 }
 window.switchView = switchView;
 
 // ================= 好聽音樂（歌單）=================
 function renderLangBar(){
-  let html = `<span class="chip${activeLang===null?' active':''}" onclick="setLang(null)">全部</span>`;
-  for(const lang of LANGUAGES){
-    html += `<span class="chip${activeLang===lang?' active':''}" onclick="setLang('${lang}')">${escapeHtml(lang)}<span style="opacity:.7;margin-left:4px;font-size:.85em;">${SONGS[lang].length}</span></span>`;
-  }
-  langBarEl.innerHTML = html;
+	let html = `<span class="chip${activeLang===null?' active':''}" onclick="setLang(null)">全部</span>`;
+	for(const lang of LANGUAGES){
+		html += `<span class="chip${activeLang===lang?' active':''}" onclick="setLang('${lang}')">${escapeHtml(lang)}<span style="opacity:.7;margin-left:4px;font-size:.85em;">${SONGS[lang].length}</span></span>`;
+	}
+	langBarEl.innerHTML = html;
 }
 
 function setLang(lang){
-  activeLang = lang;
-  currentPage = 1;
-  render();
+	activeLang = lang;
+	currentPage = 1;
+	render();
 }
 window.setLang = setLang;
 
 function isRestrictedStream(stream){
-  if(!stream) return false;
-  const tags = (stream.tags||[]).map(t => t.toLowerCase());
-  return tags.includes('會限') && tags.includes('歌回');
+	if(!stream) return false;
+	const tags = (stream.tags||[]).map(t => t.toLowerCase());
+	return tags.includes('會限') && tags.includes('歌回');
 }
 
 function getAllSongsFlat(){
-  const result = [];
-  const langs = activeLang ? [activeLang] : LANGUAGES;
-  for(const lang of langs){
-    for(const song of SONGS[lang]){
-      const stream = STREAMS[song.streamId];
-      if(isRestrictedStream(stream)) continue; // 會限場次的曲目不進好聽音樂頁籤，避免外流
-      result.push({ ...song, lang });
-    }
-  }
-  return result;
+	const result = [];
+	const langs = activeLang ? [activeLang] : LANGUAGES;
+	for(const lang of langs){
+		for(const song of SONGS[lang]){
+			const stream = STREAMS[song.streamId];
+			if(isRestrictedStream(stream)) continue; // 會限場次的曲目不進好聽音樂頁籤，避免外流
+			result.push({ ...song, lang });
+		}
+	}
+	return result;
 }
 
 function toNum(v){
-  const n = parseFloat(v);
-  return isNaN(n) ? 0 : n;
+	const n = parseFloat(v);
+	return isNaN(n) ? 0 : n;
 }
 
 function compareSongInstances(a, b){
-  const aHasStream = !!a.streamId;
-  const bHasStream = !!b.streamId;
-  if(aHasStream !== bHasStream){
-    return aHasStream ? 1 : -1; // 沒有 stream_id 的排前面
-  }
-  if(!aHasStream){
-    // 都沒有 stream_id：依 song_records 的 id 倒序
-    return toNum(b.id) - toNum(a.id);
-  }
-  // 都有 stream_id：先依 stream_id 倒序，相同的話再依 song_records 的 id 倒序
-  const streamDiff = toNum(b.streamId) - toNum(a.streamId);
-  if(streamDiff !== 0) return streamDiff;
-  return toNum(b.id) - toNum(a.id);
+	const aHasStream = !!a.streamId;
+	const bHasStream = !!b.streamId;
+	if(aHasStream !== bHasStream){
+		return aHasStream ? 1 : -1; // 沒有 stream_id 的排前面
+	}
+	if(!aHasStream){
+		// 都沒有 stream_id：依 song_records 的 id 倒序
+		return toNum(b.id) - toNum(a.id);
+	}
+	// 都有 stream_id：先依 stream_id 倒序，相同的話再依 song_records 的 id 倒序
+	const streamDiff = toNum(b.streamId) - toNum(a.streamId);
+	if(streamDiff !== 0) return streamDiff;
+	return toNum(b.id) - toNum(a.id);
 }
 
 function renderSongRowSingle(s, hideLangBadge){
-  const stream = STREAMS[s.streamId];
-  // 屬於某場直播的歌曲：副標顯示所屬直播標題
-  // 沒有掛在任何直播下、但標了「合唱」的歌曲：副標顯示 feat（多位用「、」分隔）
-  // 其餘沒有對應直播的歌曲：不顯示副標
-  // 不論哪一種，只要能解析出可播放的網址，都會顯示播放按鈕
-  const canPlay = isYouTubeUrl(resolveSongVideoUrl(s));
-  const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
-  const featNames = (isDuetStandalone && s.feat) ? s.feat.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
-  const subLabel = stream ? (stream.title || '') : (featNames.length ? featNames.join('、') : '');
-  return `<div class="song-row">
-    <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-    <div class="song-badges">
-      ${hideLangBadge ? '' : `<span class="song-lang-badge">${escapeHtml(s.lang)}</span>`}
-      ${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
-    </div>
-    ${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
-    ${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
-  </div>`;
+	const stream = STREAMS[s.streamId];
+	// 屬於某場直播的歌曲：副標顯示所屬直播標題
+	// 沒有掛在任何直播下、但標了「合唱」的歌曲：副標顯示 feat（多位用「、」分隔）
+	// 其餘沒有對應直播的歌曲：不顯示副標
+	// 不論哪一種，只要能解析出可播放的網址，都會顯示播放按鈕
+	const canPlay = isPlayableUrl(resolveSongVideoUrl(s));
+	const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
+	const featNames = (isDuetStandalone && s.feat) ? s.feat.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
+	const subLabel = stream ? (stream.title || '') : (featNames.length ? featNames.join('、') : '');
+	return `<div class="song-row">
+		<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+		<div class="song-badges">
+			${hideLangBadge ? '' : `<span class="song-lang-badge">${escapeHtml(s.lang)}</span>`}
+			${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+		</div>
+		${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
+		${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+	</div>`;
 }
 
 function toggleSongExpand(catalogId){
-  if(expandedSongs.has(catalogId)) expandedSongs.delete(catalogId);
-  else expandedSongs.add(catalogId);
-  render();
+	if(expandedSongs.has(catalogId)) expandedSongs.delete(catalogId);
+	else expandedSongs.add(catalogId);
+	render();
 }
 window.toggleSongExpand = toggleSongExpand;
 
 function render(){
-  renderLangBar();
+	renderLangBar();
 
-  const q = searchInput.value.trim().toLowerCase();
-  let songs = getAllSongsFlat();
+	const q = searchInput.value.trim().toLowerCase();
+	let songs = getAllSongsFlat();
 
-  if(q){
-    songs = songs.filter(s => {
-      const stream = STREAMS[s.streamId];
-      return s.name.toLowerCase().includes(q)
-        || (s.artist||'').toLowerCase().includes(q)
-        || (stream && (stream.title||'').toLowerCase().includes(q))
-        || (s.tags||[]).some(t => t.toLowerCase().includes(q));
-    });
-  }
+	if(q){
+		songs = songs.filter(s => {
+			const stream = STREAMS[s.streamId];
+			return s.name.toLowerCase().includes(q)
+				|| (s.artist||'').toLowerCase().includes(q)
+				|| (stream && (stream.title||'').toLowerCase().includes(q))
+				|| (s.tags||[]).some(t => t.toLowerCase().includes(q));
+		});
+	}
 
-  // 依 catalogId（目錄裡歌曲的唯一編號）分組：同一首歌唱過好幾次，合併成一張卡片
-  const groupsMap = new Map();
-  for(const s of songs){
-    const key = s.catalogId || `${s.lang}::${s.name}`; // 保險：萬一缺 catalogId 就退回用語言+歌名分組
-    if(!groupsMap.has(key)) groupsMap.set(key, []);
-    groupsMap.get(key).push(s);
-  }
-  let groups = [...groupsMap.values()];
-  groups.sort((a,b) => a[0].name.localeCompare(b[0].name, 'zh-Hant'));
+	// 依 catalogId（目錄裡歌曲的唯一編號）分組：同一首歌唱過好幾次，合併成一張卡片
+	const groupsMap = new Map();
+	for(const s of songs){
+		const key = s.catalogId || `${s.lang}::${s.name}`; // 保險：萬一缺 catalogId 就退回用語言+歌名分組
+		if(!groupsMap.has(key)) groupsMap.set(key, []);
+		groupsMap.get(key).push(s);
+	}
+	let groups = [...groupsMap.values()];
+	groups.sort((a,b) => a[0].name.localeCompare(b[0].name, 'zh-Hant'));
 
-  statsLine.textContent = '';
-  songsStatsLine.textContent = `共 ${groups.length} 首`;
+	statsLine.textContent = '';
+	songsStatsLine.textContent = `共 ${groups.length} 首`;
 
-  if(groups.length === 0){
-    contentEl.innerHTML = `<div class="empty-state">
-      <div class="big">沒有符合的結果</div>
-      <div>換個關鍵字或分類試試看</div>
-    </div>`;
-    return;
-  }
+	if(groups.length === 0){
+		contentEl.innerHTML = `<div class="empty-state">
+			<div class="big">沒有符合的結果</div>
+			<div>換個關鍵字或分類試試看</div>
+		</div>`;
+		return;
+	}
 
-  const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
-  if(currentPage > totalPages) currentPage = totalPages;
-  if(currentPage < 1) currentPage = 1;
-  const start = (currentPage - 1) * PAGE_SIZE;
-  const pageGroups = groups.slice(start, start + PAGE_SIZE);
+	const totalPages = Math.max(1, Math.ceil(groups.length / PAGE_SIZE));
+	if(currentPage > totalPages) currentPage = totalPages;
+	if(currentPage < 1) currentPage = 1;
+	const start = (currentPage - 1) * PAGE_SIZE;
+	const pageGroups = groups.slice(start, start + PAGE_SIZE);
 
-  contentEl.innerHTML =
-    renderPagination(totalPages) +
-    `<div class="song-list">` +
-    pageGroups.map(group => {
-      if(group.length === 1) return renderSongRowSingle(group[0]);
+	contentEl.innerHTML =
+		renderPagination(totalPages, true) +
+		`<div class="song-list">` +
+		pageGroups.map(group => {
+			if(group.length === 1) return renderSongRowSingle(group[0]);
 
-      const first = group[0];
-      const catalogId = first.catalogId || `${first.lang}::${first.name}`;
-      const expanded = expandedSongs.has(catalogId);
+			const first = group[0];
+			const catalogId = first.catalogId || `${first.lang}::${first.name}`;
+			const expanded = expandedSongs.has(catalogId);
 
-      let html = `<div class="song-row" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
-        <div class="song-name">${escapeHtml(first.name)}</div>
-        <div class="song-badges">
-          <span class="song-lang-badge">${escapeHtml(first.lang)}</span>
-        </div>
-        <div class="song-sub">${escapeHtml(first.artist || '')}</div>
-        <span class="chip" style="padding:5px 12px;font-size:.8rem;">共 ${group.length} 次 ${expanded ? '▲' : '▶'}</span>
-      </div>`;
+			let html = `<div class="song-row" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
+				<div class="song-name">${escapeHtml(first.name)}</div>
+				<div class="song-badges">
+					<span class="song-lang-badge">${escapeHtml(first.lang)}</span>
+				</div>
+				<div class="song-sub">${escapeHtml(first.artist || '')}</div>
+				<span class="chip" style="padding:5px 12px;font-size:.8rem;">共 ${group.length} 次 ${expanded ? '▲' : '▶'}</span>
+			</div>`;
 
-      if(expanded){
-        const sorted = [...group].sort(compareSongInstances);
-        html += `<div style="padding-left:20px;border-left:2px solid var(--line);margin:0 0 8px 20px;">` +
-          sorted.map(s => renderSongRowSingle(s, true)).join('') +
-          `</div>`;
-      }
-      return html;
-    }).join('') +
-    `</div>` +
-    renderPagination(totalPages);
+			if(expanded){
+				const sorted = [...group].sort(compareSongInstances);
+				html += `<div style="padding-left:20px;border-left:2px solid var(--line);margin:0 0 8px 20px;">` +
+					sorted.map(s => renderSongRowSingle(s, true)).join('') +
+					`</div>`;
+			}
+			return html;
+		}).join('') +
+		`</div>` +
+		renderPagination(totalPages);
 }
 
 function goToSongPage(p){
-  currentPage = p;
-  render();
-  contentEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+	currentPage = p;
+	render();
+	contentEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 window.goToSongPage = goToSongPage;
 
-function renderPagination(totalPages){
-  if(totalPages <= 1) return '';
-  const p = currentPage;
-  const isMobile = window.innerWidth <= 520;
+// isTop：清單上方那一組分頁（電腦版用 CSS 隱藏，只留下方那組）
+function renderPagination(totalPages, isTop){
+	if(totalPages <= 1) return '';
+	const p = currentPage;
+	const isMobile = isPhone();
 
-  let pages = [1];
-  for(let i = p - 1; i <= p + 1; i++){ if(i > 1 && i < totalPages) pages.push(i); }
-  if(totalPages > 1) pages.push(totalPages);
-  pages = [...new Set(pages)].sort((a,b) => a - b);
+	let pages = [1];
+	for(let i = p - 1; i <= p + 1; i++){ if(i > 1 && i < totalPages) pages.push(i); }
+	if(totalPages > 1) pages.push(totalPages);
+	pages = [...new Set(pages)].sort((a,b) => a - b);
 
-  const prevLabel = isMobile ? '‹' : '‹ 上一頁';
-  const nextLabel = isMobile ? '›' : '下一頁 ›';
+	const prevLabel = isMobile ? '‹' : '‹ 上一頁';
+	const nextLabel = isMobile ? '›' : '下一頁 ›';
 
-  let html = `<div class="pagination">`;
-  html += `<button class="page-btn" onclick="goToSongPage(${p - 1})" ${p <= 1 ? 'disabled' : ''}>${prevLabel}</button>`;
-  let prev = 0;
-  for(const num of pages){
-    if(prev && num - prev > 1) html += `<span class="page-info">…</span>`;
-    html += `<button class="page-btn${num === p ? ' active' : ''}" onclick="goToSongPage(${num})">${num}</button>`;
-    prev = num;
-  }
-  html += `<button class="page-btn" onclick="goToSongPage(${p + 1})" ${p >= totalPages ? 'disabled' : ''}>${nextLabel}</button>`;
-  html += `</div>`;
-  return html;
+	let html = `<div class="pagination${isTop ? ' pagination-top' : ''}">`;
+	html += `<button class="page-btn" onclick="goToSongPage(${p - 1})" ${p <= 1 ? 'disabled' : ''}>${prevLabel}</button>`;
+	let prev = 0;
+	for(const num of pages){
+		if(prev && num - prev > 1) html += `<span class="page-info">…</span>`;
+		html += `<button class="page-btn${num === p ? ' active' : ''}" onclick="goToSongPage(${num})">${num}</button>`;
+		prev = num;
+	}
+	html += `<button class="page-btn" onclick="goToSongPage(${p + 1})" ${p >= totalPages ? 'disabled' : ''}>${nextLabel}</button>`;
+	html += `</div>`;
+	return html;
 }
 
 searchInput.addEventListener('input', ()=>{ currentPage = 1; render(); });
 
 // ================= 直播紀錄（依年份分頁）=================
 function setYear(year){
-  activeYear = year;
-  renderStreamsView();
+	activeYear = year;
+	activeMonth = null; // 換年份時，月份篩選回到「全部」
+	renderStreamsView();
 }
 window.setYear = setYear;
 
+// 從日期（YYYY-MM-DD）取出月份數字，沒有日期時回傳 null
+function monthOf(date){
+	const m = String(date || '').match(/^\d{4}-(\d{1,2})/);
+	return m ? parseInt(m[1], 10) : null;
+}
+
+function setMonth(month){
+	activeMonth = month;
+	renderStreamsView();
+}
+window.setMonth = setMonth;
+
+// 月份按鈕：只列出該年有直播的月份，新的月份排前面（跟時間軸順序一致）
+function renderMonthBar(yearStreams){
+	const counts = new Map();
+	for(const s of yearStreams){
+		const m = monthOf(s.date);
+		if(m) counts.set(m, (counts.get(m) || 0) + 1);
+	}
+	const months = [...counts.keys()].sort((a,b) => b - a);
+	const bar = document.getElementById('monthBar');
+	if(months.length === 0){ bar.innerHTML = ''; return; }
+	let html = `<span class="chip${activeMonth===null?' active':''}" onclick="setMonth(null)">全部月份</span>`;
+	for(const m of months){
+		html += `<span class="chip${activeMonth===m?' active':''}" onclick="setMonth(${m})">${m} 月</span>`;
+	}
+	bar.innerHTML = html;
+}
+
 function renderYearPager(){
-  const years = sortedYears();
-  const pager = document.getElementById('yearPager');
-  pager.innerHTML = years.map(y =>
-    `<button class="year-btn${activeYear===y?' active':''}" onclick="setYear('${y}')">${escapeHtml(y)} 年</button>`
-  ).join('');
+	const years = sortedYears();
+	const pager = document.getElementById('yearPager');
+	pager.innerHTML = years.map(y =>
+		`<button class="year-btn${activeYear===y?' active':''}" onclick="setYear('${y}')">${escapeHtml(y)} 年</button>`
+	).join('');
 }
 
 function streamsInYear(year){
-  return Object.values(STREAMS)
-    .filter(s => s.year === year)
-    .sort((a,b) => {
-      const dateCompare = (b.date||'').localeCompare(a.date||'');
-      if(dateCompare !== 0) return dateCompare;
-      // 同一天：依 id 倒序排列
-      const na = parseFloat(a.id), nb = parseFloat(b.id);
-      if(!isNaN(na) && !isNaN(nb)) return nb - na;
-      return String(b.id).localeCompare(String(a.id));
-    });
+	return Object.values(STREAMS)
+		.filter(s => s.year === year)
+		.sort((a,b) => {
+			const dateCompare = (b.date||'').localeCompare(a.date||'');
+			if(dateCompare !== 0) return dateCompare;
+			// 同一天：依 id 倒序排列
+			const na = parseFloat(a.id), nb = parseFloat(b.id);
+			if(!isNaN(na) && !isNaN(nb)) return nb - na;
+			return String(b.id).localeCompare(String(a.id));
+		});
 }
 
 function allStreamTags(){
-  const seen = new Map(); // 小寫 -> 第一次出現時的原始大小寫
-  for(const s of Object.values(STREAMS)){
-    for(const t of (s.tags||[])){
-      const key = t.toLowerCase();
-      if(!seen.has(key)) seen.set(key, t);
-    }
-  }
-  return [...seen.values()].sort((a,b) => a.localeCompare(b, 'zh-Hant'));
+	const seen = new Map(); // 小寫 -> 第一次出現時的原始大小寫
+	for(const s of Object.values(STREAMS)){
+		for(const t of (s.tags||[])){
+			const key = t.toLowerCase();
+			if(!seen.has(key)) seen.set(key, t);
+		}
+	}
+	return [...seen.values()].sort((a,b) => a.localeCompare(b, 'zh-Hant'));
 }
 
 function renderStreamTagBar(){
-  const tags = allStreamTags();
-  const bar = document.getElementById('streamTagBar');
-  let html = `<span class="chip${activeStreamTag===null?' active':''}" onclick="setStreamTag(null)">全部</span>`;
-  for(const t of tags){
-    html += `<span class="chip${activeStreamTag===t?' active':''}" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`;
-  }
-  bar.innerHTML = html;
+	const tags = allStreamTags();
+	const bar = document.getElementById('streamTagBar');
+	let html = `<span class="chip${activeStreamTag===null?' active':''}" onclick="setStreamTag(null)">全部</span>`;
+	for(const t of tags){
+		html += `<span class="chip${activeStreamTag===t?' active':''}" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`;
+	}
+	bar.innerHTML = html;
 }
 
 function setStreamTag(tag){
-  if(tag === null){
-    activeStreamTag = null;
-  } else {
-    const canonical = allStreamTags().find(t => t.toLowerCase() === tag.toLowerCase());
-    activeStreamTag = canonical || tag;
-  }
-  renderStreamsView();
+	if(tag === null){
+		activeStreamTag = null;
+	} else {
+		const canonical = allStreamTags().find(t => t.toLowerCase() === tag.toLowerCase());
+		activeStreamTag = canonical || tag;
+	}
+	renderStreamsView();
 }
 window.setStreamTag = setStreamTag;
 
 function renderSongRow(s){
-  return `<div class="song-row">
-    <div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-    <span class="song-lang-badge">${escapeHtml(s.lang)}</span>
-    <div class="song-sub">${escapeHtml(s.artist || '')}</div>
-    ${isYouTubeUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
-  </div>`;
+	return `<div class="song-row">
+		<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+		<span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+		<div class="song-sub">${escapeHtml(s.artist || '')}</div>
+		${isPlayableUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+	</div>`;
 }
 
 function toggleStreamExpand(streamId){
-  if(expandedStreams.has(streamId)) expandedStreams.delete(streamId);
-  else expandedStreams.add(streamId);
-  renderStreamsView();
+	if(expandedStreams.has(streamId)) expandedStreams.delete(streamId);
+	else expandedStreams.add(streamId);
+	renderStreamsView();
 }
 window.toggleStreamExpand = toggleStreamExpand;
 
 function songsForStream(streamId){
-  const result = [];
-  for(const lang of LANGUAGES){
-    for(const song of SONGS[lang]){
-      if(song.streamId === streamId) result.push({ ...song, lang });
-    }
-  }
-  result.sort((a,b) => (a.timeSeconds||0) - (b.timeSeconds||0));
-  return result;
+	const result = [];
+	for(const lang of LANGUAGES){
+		for(const song of SONGS[lang]){
+			if(song.streamId === streamId) result.push({ ...song, lang });
+		}
+	}
+	result.sort((a,b) => (a.timeSeconds||0) - (b.timeSeconds||0));
+	return result;
 }
 
 function streamMatchesQuery(stream, songs, q){
-  if(!q) return true;
-  q = q.toLowerCase();
-  const titleMatch = (stream.title||'').toLowerCase().includes(q);
-  const guestMatch = (stream.guests||[]).some(g => g.toLowerCase().includes(q));
-  // 會限場次不比對曲目內容，否則搜歌名還是能間接找到這場有唱過這首歌，等於曲目資訊照樣外流
-  const songMatch = !isRestrictedStream(stream) && songs.some(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
-  return titleMatch || guestMatch || songMatch;
+	if(!q) return true;
+	q = q.toLowerCase();
+	const titleMatch = (stream.title||'').toLowerCase().includes(q);
+	const guestMatch = (stream.guests||[]).some(g => g.toLowerCase().includes(q));
+	// 會限場次不比對曲目內容，否則搜歌名還是能間接找到這場有唱過這首歌，等於曲目資訊照樣外流
+	const songMatch = !isRestrictedStream(stream) && songs.some(s => s.name.toLowerCase().includes(q) || (s.artist||'').toLowerCase().includes(q));
+	return titleMatch || guestMatch || songMatch;
 }
 
 function renderStreamsView(){
-  renderYearPager();
-  renderStreamTagBar();
+	renderYearPager();
+	renderStreamTagBar();
 
-  statsLine.textContent = '';
-  const streamsContent = document.getElementById('streamsContent');
-  if(!activeYear){
-    streamsContent.innerHTML = `<div class="empty-state">
-      <div class="big">還沒有任何直播紀錄</div>
-      <div>把 streams 資料補齊後，這裡就會列出來</div>
-    </div>`;
-    streamsStatsLine.textContent = '';
-    return;
-  }
+	statsLine.textContent = '';
+	const streamsContent = document.getElementById('streamsContent');
+	if(!activeYear){
+		streamsContent.innerHTML = `<div class="empty-state">
+			<div class="big">還沒有任何直播紀錄</div>
+			<div>把 streams 資料補齊後，這裡就會列出來</div>
+		</div>`;
+		streamsStatsLine.textContent = '';
+		return;
+	}
 
-  const q = (document.getElementById('streamSearchInput').value || '').trim();
-  let list = streamsInYear(activeYear);
-  if(activeStreamTag) list = list.filter(s => (s.tags||[]).some(t => t.toLowerCase() === activeStreamTag.toLowerCase()));
+	const q = (document.getElementById('streamSearchInput').value || '').trim();
+	let list = streamsInYear(activeYear);
+	renderMonthBar(list);
+	if(activeMonth !== null) list = list.filter(s => monthOf(s.date) === activeMonth);
+	if(activeStreamTag) list = list.filter(s => (s.tags||[]).some(t => t.toLowerCase() === activeStreamTag.toLowerCase()));
 
-  const withSongs = list.map(stream => ({ stream, songs: songsForStream(stream.id) }))
-    .filter(({stream, songs}) => streamMatchesQuery(stream, songs, q));
+	const withSongs = list.map(stream => ({ stream, songs: songsForStream(stream.id) }))
+		.filter(({stream, songs}) => streamMatchesQuery(stream, songs, q));
 
-  const filterParts = [`${activeYear} 年`];
-  if(activeStreamTag) filterParts.push(activeStreamTag);
-  if(q) filterParts.push(`「${q}」`);
-  streamsStatsLine.textContent = `${filterParts.join(' · ')} · 共 ${withSongs.length} 筆`;
+	const filterParts = [`${activeYear} 年`];
+	if(activeMonth !== null) filterParts.push(`${activeMonth} 月`);
+	if(activeStreamTag) filterParts.push(activeStreamTag);
+	if(q) filterParts.push(`「${q}」`);
+	streamsStatsLine.textContent = `${filterParts.join(' · ')} · 共 ${withSongs.length} 筆`;
 
-  if(withSongs.length === 0){
-    streamsContent.innerHTML = `<div class="empty-state">
-      <div class="big">沒有符合的直播</div>
-      <div>換個關鍵字或標籤試試看</div>
-    </div>`;
-    return;
-  }
+	if(withSongs.length === 0){
+		streamsContent.innerHTML = `<div class="empty-state">
+			<div class="big">沒有符合的直播</div>
+			<div>換個關鍵字或標籤試試看</div>
+		</div>`;
+		return;
+	}
 
-  let html = `<div class="stream-timeline">`;
-  for(const { stream, songs } of withSongs){
-    const isOtherHouse = (stream.tags||[]).some(t => t.toLowerCase() === '別人家');
-    const hostName = isOtherHouse && stream.guests && stream.guests.length ? stream.guests[0] : null;
-    const guestsDisplay = isOtherHouse
-      ? ['幽李鈴', ...((stream.guests||[]).slice(1))].join('、')
-      : ((stream.guests && stream.guests.length) ? stream.guests.join('、') : '');
-    const isMultiSong = !isRestrictedStream(stream) && songs.length > 1;
-    const expanded = isMultiSong && expandedStreams.has(stream.id);
+	let html = `<div class="stream-timeline">`;
+	for(const { stream, songs } of withSongs){
+		const isOtherHouse = (stream.tags||[]).some(t => t.toLowerCase() === '別人家');
+		const hostName = isOtherHouse && stream.guests && stream.guests.length ? stream.guests[0] : null;
+		const guestsDisplay = isOtherHouse
+			? ['幽李鈴', ...((stream.guests||[]).slice(1))].join('、')
+			: ((stream.guests && stream.guests.length) ? stream.guests.join('、') : '');
+		const isMultiSong = !isRestrictedStream(stream) && songs.length > 1;
+		const expanded = isMultiSong && expandedStreams.has(stream.id);
 
-    let songsSectionHtml = '';
-    if(isRestrictedStream(stream)){
-      songsSectionHtml = `<div class="song-list"><div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div></div>`;
-    } else if(songs.length === 1){
-      songsSectionHtml = `<div class="song-list">${renderSongRow(songs[0])}</div>`;
-    } else if(songs.length > 1){
-      const toggleRow = `<div class="song-row song-toggle-row" style="cursor:pointer;" onclick="toggleStreamExpand('${stream.id}')">
-        <div class="song-sub" style="text-align:left;">${expanded ? '▲ 收合' : '▶ 展開'} 共 ${songs.length} 首歌曲</div>
-      </div>`;
-      songsSectionHtml = `<div class="song-list">${toggleRow}${expanded ? songs.map(s => renderSongRow(s)).join('') : ''}</div>`;
-    }
+		let songsSectionHtml = '';
+		if(isRestrictedStream(stream)){
+			songsSectionHtml = `<div class="song-list"><div class="song-row"><div class="song-sub" style="text-align:left;">🔒 會員限定內容，曲目暫不公開</div></div></div>`;
+		} else if(songs.length === 1){
+			songsSectionHtml = `<div class="song-list">${renderSongRow(songs[0])}</div>`;
+		} else if(songs.length > 1){
+			const toggleRow = `<div class="song-row song-toggle-row" style="cursor:pointer;" onclick="toggleStreamExpand('${stream.id}')">
+				<div class="song-sub" style="text-align:left;">${expanded ? '▲ 收合' : '▶ 展開'} 共 ${songs.length} 首歌曲</div>
+			</div>`;
+			songsSectionHtml = `<div class="song-list">${toggleRow}${expanded ? songs.map(s => renderSongRow(s)).join('') : ''}</div>`;
+		}
 
-    html += `<div class="stream-block">
-      <div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
-      <div class="stream-block-title">${stream.url ? `<a href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '直播連結')}</a>` : escapeHtml(stream.title || '未命名直播')}</div>
-      ${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
-      ${hostName ? `<div class="song-sub" style="text-align:left;margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
-      ${guestsDisplay ? `<div class="song-sub" style="text-align:left;margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}
-      ${songsSectionHtml}
-    </div>`;
-  }
-  html += `</div>`;
-  streamsContent.innerHTML = html;
+		html += `<div class="stream-block">
+			<div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
+			<div class="stream-block-title">${renderStreamTitleLink(stream)}</div>
+			${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+			${hostName ? `<div class="stream-meta" style="margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
+			${guestsDisplay ? `<div class="stream-meta" style="margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}
+			${songsSectionHtml}
+		</div>`;
+	}
+	html += `</div>`;
+	streamsContent.innerHTML = html;
 }
 
 document.getElementById('streamSearchInput').addEventListener('input', renderStreamsView);
 
 // ================= 讀取同資料夾的 json 檔案 =================
 async function fetchJson(path){
-  const res = await fetch(path, { cache: 'no-store' });
-  if(!res.ok) throw new Error(`找不到 ${path}（HTTP ${res.status}）`);
-  return res.json();
+	const res = await fetch(path, { cache: 'no-store' });
+	if(!res.ok) throw new Error(`找不到 ${path}（HTTP ${res.status}）`);
+	return res.json();
 }
 
 async function loadAllData(){
-  const [streamsData, songsData] = await Promise.all([
-    fetchJson('./streams.json'),
-    fetchJson('./songs.json'),
-  ]);
+	const [streamsData, songsData] = await Promise.all([
+		fetchJson('./streams.json'),
+		fetchJson('./songs.json'),
+	]);
 
-  STREAMS = streamsData.streams || {};
-  STREAM_YEARS = streamsData.streamYears || [];
-  SONGS = songsData.songs || {};
-  LANGUAGES = Object.keys(SONGS);
-  activeYear = STREAM_YEARS.length ? sortedYears()[0] : null;
+	STREAMS = streamsData.streams || {};
+	STREAM_YEARS = streamsData.streamYears || [];
+	SONGS = songsData.songs || {};
+	LANGUAGES = Object.keys(SONGS);
+	activeYear = STREAM_YEARS.length ? sortedYears()[0] : null;
 }
 
 async function init(){
-  try{
-    await loadAllData();
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('mainApp').style.display = 'block';
-    render();
-  }catch(e){
-    document.getElementById('loadingState').style.display = 'none';
-    document.getElementById('errorState').style.display = 'block';
-    document.getElementById('errorState').innerHTML = `<div class="error-state">
-      <strong>讀取資料失敗。</strong><br><br>
-      請確認：<br>
-      1. <code>streams.json</code> 和 <code>songs.json</code> 跟這個 html 檔案放在同一個資料夾<br>
-      2. 檔名完全一致（含大小寫）<br>
-      3. 這個頁面是透過網址（http/https）打開的，不是直接雙擊本機檔案開啟<br><br>
-      錯誤訊息：${escapeHtml(e.message || String(e))}
-    </div>`;
-  }
+	try{
+		await loadAllData();
+		document.getElementById('loadingState').style.display = 'none';
+		document.getElementById('mainApp').style.display = ''; // 交給 style.css 決定版面（電腦版為左右兩欄）
+		render();
+	}catch(e){
+		document.getElementById('loadingState').style.display = 'none';
+		document.getElementById('errorState').style.display = 'block';
+		document.getElementById('errorState').innerHTML = `<div class="error-state">
+			<strong>讀取資料失敗。</strong><br><br>
+			請確認：<br>
+			1. <code>streams.json</code> 和 <code>songs.json</code> 跟這個 html 檔案放在同一個資料夾<br>
+			2. 檔名完全一致（含大小寫）<br>
+			3. 這個頁面是透過網址（http/https）打開的，不是直接雙擊本機檔案開啟<br><br>
+			錯誤訊息：${escapeHtml(e.message || String(e))}
+		</div>`;
+	}
 }
+
+// 電腦版播放器大小：量測播放器上緣在頁面中的位置，寫進 CSS 變數 --player-top，
+// style.css 會用「視窗高度 − 這段距離」限制播放器大小，確保一打開頁面就能看到完整的播放器
+function updatePlayerTop(){
+	const column = document.querySelector('.player-column');
+	if(!column) return;
+	const top = column.getBoundingClientRect().top + window.scrollY; // 換算成頁面位置，不受目前捲動位置影響
+	document.documentElement.style.setProperty('--player-top', `${Math.round(top)}px`);
+}
+// 上方控制區高度改變時（切換頁籤、標籤換行、資料載入完成）重新計算
+new ResizeObserver(updatePlayerTop).observe(document.querySelector('.controls'));
+window.addEventListener('resize', updatePlayerTop);
+
+// 回到最上方按鈕：往下捲超過 600px 才顯示
+const backToTopBtn = document.getElementById('backToTop');
+function updateBackToTop(){
+	backToTopBtn.classList.toggle('is-visible', window.scrollY > 600);
+}
+function scrollToTop(){
+	window.scrollTo({ top:0, behavior:'smooth' });
+}
+window.scrollToTop = scrollToTop;
+window.addEventListener('scroll', updateBackToTop, { passive:true });
 
 init();
 </script>

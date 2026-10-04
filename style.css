@@ -1,0 +1,331 @@
+/* =========================================================
+	幽李鈴 Uririn 歌單網站樣式
+	裝置斷點：
+		手機  ：寬度 767px 以下
+		平板  ：寬度 768px ～ 992px
+		電腦  ：寬度 993px 以上
+	（JS 裡判斷手機版分頁筆數用的斷點也是 767px，兩邊要一起改）
+========================================================= */
+
+:root{
+	--bg: #14121f;
+	--surface: #1e1b2e;
+	--surface-2: #26223a;
+	--line: #362f4d;
+	--text: #f2eee6;
+	--muted: #948fa8;
+	--gold: #e3b158;
+	--rose: #d97a93;
+}
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+	background:var(--bg);
+	color:var(--text);
+	font-family:'Noto Sans TC', sans-serif;
+	line-height:1.6;
+	min-height:100vh;
+}
+.wrap{
+	max-width:760px;
+	margin:0 auto;
+	padding:48px 20px 100px;
+}
+h1{
+	font-family:'Noto Serif TC', serif;
+	font-weight:700; font-size:2rem; margin:0 0 6px; letter-spacing:.02em;
+}
+.subtitle{ color:var(--muted); font-size:.95rem; margin:0 0 4px; }
+.stats{ color:var(--gold); font-size:.88rem; margin-top:6px; }
+
+/* ---------- 頁籤 ---------- */
+.view-tabs{ display:flex; gap:8px; margin-top:24px; border-bottom:1px solid var(--line); }
+.view-tab{
+	background:transparent; border:none; color:var(--muted); font-family:inherit;
+	font-size:.95rem; padding:10px 4px; cursor:pointer; position:relative; margin-right:14px;
+}
+.view-tab:hover{ color:var(--text); }
+.view-tab.active{ color:var(--gold); font-weight:700; }
+.view-tab.active::after{
+	content:''; position:absolute; left:0; right:0; bottom:-1px; height:2px; background:var(--gold);
+}
+
+/* ---------- 搜尋框 ---------- */
+.searchbar{ margin-top:22px; }
+.searchbar input{
+	width:100%; background:var(--surface); border:1px solid var(--line);
+	color:var(--text); border-radius:8px; padding:12px 14px;
+	font-size:1rem; font-family:inherit;
+}
+.searchbar input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
+.searchbar input::placeholder{ color:var(--muted); }
+
+/* ---------- 標籤 ---------- */
+.chip-bar{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.chip{
+	background:var(--surface); border:1px solid var(--line); color:var(--muted);
+	font-size:.86rem; padding:6px 14px; border-radius:999px; cursor:pointer; font-family:inherit;
+}
+.chip:hover{ border-color:var(--gold); color:var(--text); }
+.chip.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
+
+/* ---------- 年份分頁 ---------- */
+.year-pager{ display:flex; flex-wrap:wrap; gap:8px; margin-top:22px; }
+.year-btn{
+	background:var(--surface); border:1px solid var(--line); color:var(--text);
+	font-size:1rem; padding:8px 18px; border-radius:8px; cursor:pointer; font-family:inherit; font-weight:500;
+}
+.year-btn:hover{ border-color:var(--gold); color:var(--gold); }
+.year-btn.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
+
+/* ---------- 月份篩選（年份按鈕下方） ---------- */
+.month-bar{ margin-top:10px; }
+.month-bar .chip{ padding:4px 12px; font-size:.82rem; }
+
+/* ---------- 歌曲清單 ---------- */
+.song-list{
+	margin-top:20px;
+	background:var(--surface);
+	border:1px solid var(--line);
+	border-radius:10px;
+	overflow:hidden;
+}
+/* 垂直置中：副標太長換行時，歌名、標籤、播放按鈕會對齊在中間 */
+.song-row{
+	display:flex; align-items:center; gap:12px;
+	padding:11px 16px; border-bottom:1px solid var(--line);
+}
+.song-row:last-child{ border-bottom:none; }
+/*
+	歌名優先：空間不夠時歌名不壓縮，由副標讓出空間換行
+	歌名只有本身超過一列的一半寬度時才會換行
+*/
+.song-name{ font-weight:500; flex:1 0 auto; max-width:50%; margin-right:auto; } /* margin-right:auto：後面的標籤、副標、播放按鈕整組靠右 */
+.song-sub{ color:var(--muted); font-size:.86rem; flex:0 1 auto; max-width:60%; text-align:right; }
+.song-lang-badge{
+	color:var(--rose); font-size:.72rem; border:1px solid var(--line); border-radius:5px;
+	padding:1px 6px; flex-shrink:0; white-space:nowrap;
+}
+/* 標籤區不縮小，空間不夠時讓副標換行，標籤才不會被切掉 */
+.song-badges{
+	display:flex; gap:6px; flex-wrap:nowrap; flex-shrink:0; overflow-x:auto; scrollbar-width:none;
+	-ms-overflow-style:none;
+}
+.song-badges::-webkit-scrollbar{ display:none; }
+.song-play-btn{
+	background:var(--gold); color:#22190a; border:none; border-radius:6px;
+	padding:5px 11px; font-size:.78rem; font-weight:700; cursor:pointer; flex-shrink:0;
+	font-family:inherit;
+}
+.song-play-btn:hover{ filter:brightness(1.08); }
+
+/* ---------- 分頁 ---------- */
+.pagination{
+	display:flex; align-items:center; justify-content:center; gap:8px;
+	margin-top:18px; flex-wrap:wrap;
+}
+.page-btn{
+	background:var(--surface); border:1px solid var(--line); color:var(--text);
+	border-radius:7px; padding:7px 13px; font-size:.88rem; cursor:pointer; font-family:inherit;
+}
+.page-btn:hover:not(:disabled){ border-color:var(--gold); color:var(--gold); }
+.page-btn.active{ background:var(--gold); border-color:var(--gold); color:#22190a; font-weight:700; }
+.page-btn:disabled{ opacity:.35; cursor:default; }
+.page-info{ color:var(--muted); font-size:.85rem; margin:0 4px; }
+
+/* ---------- 播放器 ----------
+	.is-active：正在播放（JS 在點播放時加上，關閉時移除）
+	手機／平板：沒在播放時完全隱藏，播放時變成浮動視窗
+	電腦：固定在左欄，沒在播放時顯示提示文字
+*/
+.player-panel{
+	display:none;
+	background:var(--surface); border:1px solid var(--gold); border-radius:12px;
+	padding:14px;
+}
+.player-panel.is-active{ display:block; }
+.player-idle{ display:none; }
+.player-panel-head{
+	display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:10px;
+}
+.player-panel-title{
+	color:var(--gold); font-size:.9rem; font-weight:700;
+	min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.player-frame-wrap{
+	position:relative; width:100%; padding-bottom:56.25%; height:0;
+	border-radius:8px; overflow:hidden; background:#000;
+}
+.player-frame-wrap iframe{
+	position:absolute; top:0; left:0; width:100%; height:100%; border:0;
+}
+.btn.ghost{
+	background:transparent; border:1px solid var(--line); color:var(--muted);
+	border-radius:6px; padding:6px 10px; font-size:.8rem; cursor:pointer; font-family:inherit;
+	flex-shrink:0;
+}
+.btn.ghost:hover{ color:var(--rose); border-color:var(--rose); }
+
+/* ---------- 直播紀錄時間軸 ---------- */
+.stream-timeline{
+	position:relative; margin-top:24px; padding-left:26px; border-left:2px solid var(--line);
+}
+.stream-block{ position:relative; margin-bottom:36px; }
+.stream-block::before{
+	content:''; position:absolute; left:-32px; top:6px;
+	width:11px; height:11px; border-radius:50%; background:var(--gold);
+	box-shadow:0 0 0 4px var(--bg);
+}
+.stream-block-date{ color:var(--gold); font-size:.85rem; font-weight:700; letter-spacing:.04em; }
+.stream-block-title{
+	font-family:'Noto Serif TC', serif; font-weight:700; font-size:1.1rem; margin:2px 0 8px;
+}
+.stream-block-title a{ color:var(--text); text-decoration:none; border-bottom:1px solid var(--gold); }
+.stream-block-title a:hover{ color:var(--gold); }
+.stream-tags-row{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:10px; }
+.stream-tags-row .chip{ padding:3px 10px; font-size:.78rem; }
+/* 直播卡片的「在 ○○ 家」「來賓」：跟歌曲副標分開，不限制寬度，名單長時才會換行 */
+.stream-meta{ color:var(--muted); font-size:.86rem; }
+
+/* ---------- 回到最上方按鈕 ----------
+	.is-visible：往下捲超過一段距離時由 JS 加上
+	手機／平板播放器開著時，按鈕會移到播放器上方（見下方各裝置的 media query）
+*/
+.back-to-top{
+	position:fixed; right:24px; bottom:24px; z-index:60;
+	width:44px; height:44px; border-radius:50%;
+	background:var(--surface); border:1px solid var(--line); color:var(--gold);
+	display:flex; align-items:center; justify-content:center; padding:0; /* 讓 SVG 箭頭置中 */
+	cursor:pointer;
+	box-shadow:0 6px 18px rgba(0,0,0,.45);
+	opacity:0; visibility:hidden; transform:translateY(8px);
+	transition:opacity .2s, transform .2s, visibility .2s;
+}
+.back-to-top.is-visible{ opacity:1; visibility:visible; transform:none; }
+.back-to-top:hover{ border-color:var(--gold); }
+
+/* ---------- 狀態訊息 ---------- */
+.empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
+.empty-state .big{
+	font-family:'Noto Serif TC', serif; font-size:1.25rem; color:var(--text); margin-bottom:8px;
+}
+.loading-state{ text-align:center; padding:80px 20px; color:var(--muted); }
+.error-state{
+	background:#3a1f24; border:1px solid var(--rose); color:var(--text);
+	border-radius:10px; padding:20px; margin-top:24px; font-size:.9rem; line-height:1.8;
+}
+.error-state code{ background:var(--surface-2); padding:2px 6px; border-radius:4px; font-size:.85em; }
+
+
+/* =========================================================
+	手機：767px 以下
+	- 歌曲列改成上下堆疊
+	- 播放器固定在畫面底部（浮動視窗）
+========================================================= */
+@media (max-width:767px){
+	.wrap{ padding:32px 14px 80px; }
+	.song-row{ flex-direction:column; align-items:flex-start; gap:4px; }
+	.song-sub{ max-width:100%; text-align:left; }
+	.song-name{ max-width:100%; }
+	.song-badges{ max-width:100%; } /* 手機版標籤太多時可以左右滑動 */
+	/* 月份按鈕不換行，改成左右滑動，避免 12 個月擠成好幾排 */
+	.month-bar{
+		flex-wrap:nowrap; overflow-x:auto;
+		scrollbar-width:none; -ms-overflow-style:none;
+	}
+	.month-bar::-webkit-scrollbar{ display:none; }
+	.month-bar .chip{ flex-shrink:0; }
+
+	.player-panel.is-active{
+		position:fixed; z-index:50;
+		left:8px; right:8px; bottom:8px;
+		padding:10px;
+		box-shadow:0 -6px 24px rgba(0,0,0,.55);
+	}
+	.player-panel-head{ margin-bottom:8px; }
+	/* 播放器開著時，頁面底部留出播放器的高度，最後幾首歌才不會被擋住 */
+	body.player-open .wrap{ padding-bottom:calc((100vw - 36px) * .5625 + 90px); }
+	.back-to-top{ right:16px; bottom:16px; }
+	body.player-open .back-to-top{ bottom:calc((100vw - 36px) * .5625 + 86px); } /* 播放器上方 */
+}
+
+
+/* =========================================================
+	平板：768px ～ 992px
+	- 單欄歌單
+	- 播放器變成右下角浮動小視窗
+========================================================= */
+@media (min-width:768px) and (max-width:992px){
+	.player-panel.is-active{
+		position:fixed; z-index:50;
+		right:20px; bottom:20px;
+		width:400px;
+		box-shadow:0 10px 30px rgba(0,0,0,.55);
+	}
+	body.player-open .wrap{ padding-bottom:320px; }
+	body.player-open .back-to-top{ right:20px; bottom:320px; } /* 右下角播放器上方 */
+}
+
+
+/* =========================================================
+	電腦：993px 以上
+	- 上方：標題、頁籤、搜尋框、篩選，整塊置中
+	- 下方左右兩欄：左邊播放器（捲動時固定在畫面上）、右邊歌單，兩者頂端對齊
+	- 播放器跟著畫面寬度放大，但高度不超過畫面
+	- 只保留清單下方的分頁（電腦版清單不長，上方那組拿掉）
+	- 沒在播放時，播放器位置顯示提示文字
+========================================================= */
+@media (min-width:993px){
+	.wrap{ max-width:none; padding:48px 40px 100px; } /* 不設寬度上限，多出來的空間都給播放器 */
+	.layout{
+		display:grid;
+		/* 右欄歌單：約佔 55% 寬，最窄 480px、最寬 760px；剩下的空間都給左欄播放器 */
+		grid-template-columns:minmax(0, 1fr) clamp(480px, 55%, 760px);
+		grid-template-areas:
+			"controls controls"
+			"player content";
+		column-gap:32px;
+		align-items:start;
+	}
+	/* 標題、頁籤、搜尋框、統計、快捷標籤：整塊置中，寬 760px，裡面的內容維持靠左 */
+	.wrap > h1,
+	.wrap > .subtitle,
+	.controls{
+		width:100%; max-width:760px;
+		margin-left:auto; margin-right:auto;
+	}
+	.controls{ grid-area:controls; }
+	.content-column{ grid-area:content; min-width:0; }
+	.player-column{
+		grid-area:player;
+		position:sticky; top:24px;
+		margin-top:20px; /* 跟右欄歌單的上緣對齊 */
+	}
+	.pagination-top{ display:none; }
+
+	.player-panel{
+		display:block;
+		margin-left:auto; /* 播放器被高度限制而變窄時，靠右貼近歌單 */
+		/*
+			依畫面高度限制寬度，讓剛打開頁面時整個播放器（含標題列）就能完整顯示在畫面內
+			--player-top：播放器上緣在頁面中的位置，由 JS 量測（上方標題、頁籤、標籤區的高度會影響）
+			104px：播放器標題列與內距約 80px ＋ 下方保留 24px
+			max(400px, …)：視窗很矮時至少保留 400px 寬，避免播放器被壓得太小
+			（這時剛打開頁面底部會稍微超出，往下捲動後播放器會固定在畫面上完整顯示）
+		*/
+		max-width:max(400px, calc((100vh - var(--player-top, 340px) - 104px) * 16 / 9 + 30px));
+	}
+	.player-panel:not(.is-active) .player-panel-head,
+	.player-panel:not(.is-active) .player-frame-wrap{ display:none; }
+	.player-panel:not(.is-active){ border-color:var(--line); }
+	.player-panel:not(.is-active) .player-idle{
+		display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px;
+		aspect-ratio:16 / 9;
+		color:var(--muted); font-size:.9rem; text-align:center;
+	}
+	.player-idle-icon{
+		width:56px; height:56px; border-radius:50%;
+		display:flex; align-items:center; justify-content:center;
+		border:1px solid var(--line); color:var(--gold); font-size:1.3rem;
+	}
+}
