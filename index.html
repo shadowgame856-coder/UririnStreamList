@@ -8,11 +8,38 @@
 	function gtag(){dataLayer.push(arguments);}
 	gtag('js', new Date());
 
-	gtag('config', 'G-QP5S6ESL3K');
+	// 站長自己的瀏覽標成內部流量，GA 的「Internal Traffic」資料篩選器會把它排除
+	// 用 ?internal=1 打開網站一次，這個瀏覽器就會記住；用 ?internal=0 打開一次取消
+	(function(){
+		let isInternal = false;
+		try{
+			const params = new URLSearchParams(window.location.search);
+			const flag = params.get('internal');
+			if(flag === '1'){
+				localStorage.setItem('ga_internal', '1');
+				alert('已將這個瀏覽器標記為站長，之後的瀏覽不會計入 Google Analytics 統計');
+			}else if(flag === '0'){
+				localStorage.removeItem('ga_internal');
+				alert('已取消站長標記，之後的瀏覽會正常計入 Google Analytics 統計');
+			}
+			if(flag !== null){
+				// 把 ?internal=… 從網址列拿掉，不留在網址裡，也不會被 GA 記錄到
+				params.delete('internal');
+				const query = params.toString();
+				history.replaceState(null, '', window.location.pathname + (query ? `?${query}` : '') + window.location.hash);
+			}
+			isInternal = localStorage.getItem('ga_internal') === '1';
+		}catch(e){} // 瀏覽器不允許存資料時，當作一般訪客
+		window.GA_IS_INTERNAL = isInternal;
+	})();
+
+	gtag('config', 'G-QP5S6ESL3K', window.GA_IS_INTERNAL ? { traffic_type: 'internal' } : {});
 </script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>幽李鈴 Uririn</title>
+<!-- 分頁小圖示：用 SVG 包表情符號，換圖示只要改裡面的 👻 -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👻</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
@@ -327,7 +354,7 @@ async function loadMedia(url, seconds){
 			videoId: youtubeId,
 			width: '100%',
 			height: '100%',
-			playerVars: { start: seconds || 0, autoplay: 1, playsinline: 1 },
+			playerVars: { start: seconds || 0, autoplay: 1, playsinline: 1, origin: window.location.origin }, // origin：減少 postMessage 來源不符的警告
 			events: {
 				onStateChange: (e) => {
 					if(token !== loadToken) return;
