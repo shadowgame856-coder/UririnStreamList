@@ -112,12 +112,21 @@ h1{
 	-ms-overflow-style:none;
 }
 .song-badges::-webkit-scrollbar{ display:none; }
+/*
+	播放按鈕依狀態顯示（由 JS 切換 class）：
+		一般：▶ 播放
+		.is-playing：♪ 正在播放（點了暫停）
+		.is-paused：❚❚ 暫停（點了繼續播放）
+	min-width：三種文字寬度不同，固定最小寬度避免切換時整列跳動
+*/
 .song-play-btn{
-	background:var(--gold); color:#22190a; border:none; border-radius:6px;
+	background:var(--gold); color:#22190a; border:1px solid var(--gold); border-radius:6px;
 	padding:5px 11px; font-size:.78rem; font-weight:700; cursor:pointer; flex-shrink:0;
-	font-family:inherit;
+	font-family:inherit; min-width:7.4em; text-align:center; white-space:nowrap;
 }
 .song-play-btn:hover{ filter:brightness(1.08); }
+.song-play-btn.is-playing{ background:var(--rose); border-color:var(--rose); color:#22190a; }
+.song-play-btn.is-paused{ background:transparent; color:var(--gold); }
 
 /* ---------- 分頁 ---------- */
 .pagination{

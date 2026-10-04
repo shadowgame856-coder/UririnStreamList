@@ -1,13 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>幽李鈴 Uririn</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css">
 <!-- Google tag (gtag.js) -->
 <script async src="https://www.googletagmanager.com/gtag/js?id=G-QP5S6ESL3K"></script>
 <script>
@@ -17,6 +10,13 @@
 
 	gtag('config', 'G-QP5S6ESL3K');
 </script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>幽李鈴 Uririn</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <div class="wrap">
@@ -67,7 +67,7 @@
 				<button class="btn ghost" onclick="closePlayer()">✕</button>
 			</div>
 			<div class="player-frame-wrap">
-				<iframe id="playerIframe" src="" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>
+				<div id="playerHost"></div><!-- 播放器由 JS 依平台建立（YouTube／Twitch 官方播放器 API） -->
 			</div>
 		</div>
 	</aside>
@@ -105,15 +105,42 @@ const PHONE_MEDIA = window.matchMedia('(max-width:767px)');
 function isPhone(){
 	return PHONE_MEDIA.matches;
 }
-function getPageSize(){
-	return isPhone() ? 5 : 15;
+// 好聽音樂每頁顯示幾首：
+//	手機版固定 5 首（歌曲列上下堆疊、每列很高，下方又有浮動播放器）
+//	平板／電腦版依「歌單上緣到畫面底部」的空間，算出剛好放得下幾列（最少 5 列）
+const PHONE_PAGE_SIZE = 5;
+const MIN_PAGE_SIZE = 5;
+const PAGER_HEIGHT = 60;	// 清單下方分頁列（含上方間距）的高度
+const BOTTOM_GAP = 24;		// 分頁列下方保留的空間
+let PAGE_SIZE = isPhone() ? PHONE_PAGE_SIZE : 15; // 15 只是第一次畫面前的暫定值，畫出來後會依實際高度重算
+
+function computePageSize(){
+	if(isPhone()) return PHONE_PAGE_SIZE;
+	const list = document.querySelector('#content .song-list');
+	if(!list || !list.offsetParent) return PAGE_SIZE; // 歌單沒顯示（例如在直播紀錄頁籤）時先不重算
+	const rows = [...list.querySelectorAll(':scope > .song-row')];
+	if(rows.length === 0) return PAGE_SIZE;
+	// 列高：以單行的歌曲列為準。「共 X 次」那種列會稍微高一點，所以取「單行列裡最高的」，
+	// 並排除副標換行的列（比最矮的列高出 20% 以上的就視為換行）
+	const heights = rows.map(r => r.offsetHeight);
+	const minHeight = Math.min(...heights);
+	const rowHeight = Math.max(...heights.filter(h => h <= minHeight * 1.2));
+	const listTop = list.getBoundingClientRect().top + window.scrollY; // 歌單在頁面中的位置，不受目前捲動位置影響
+	const available = window.innerHeight - listTop - PAGER_HEIGHT - BOTTOM_GAP;
+	return Math.max(MIN_PAGE_SIZE, Math.floor(available / rowHeight));
 }
-let PAGE_SIZE = getPageSize();
-PHONE_MEDIA.addEventListener('change', () => {
-	PAGE_SIZE = getPageSize();
-	currentPage = 1;
-	if(currentView === 'songs') render();
-});
+
+// 重新計算每頁筆數；筆數有變時，盡量停在目前正在看的那幾首歌所在的頁數
+function refreshPageSize(){
+	if(currentView !== 'songs') return;
+	const next = computePageSize();
+	if(next === PAGE_SIZE) return;
+	const firstIndex = (currentPage - 1) * PAGE_SIZE;
+	PAGE_SIZE = next;
+	currentPage = Math.floor(firstIndex / PAGE_SIZE) + 1;
+	render();
+}
+PHONE_MEDIA.addEventListener('change', refreshPageSize);
 
 function sortedYears(){
 	return [...STREAM_YEARS].sort((a,b) => {
@@ -218,21 +245,173 @@ function resolveSongContextLabel(song){
 	return stream ? (stream.title || '直播') : '';
 }
 
-// 打開播放器：顯示方式交給 style.css（電腦版固定在左欄、手機／平板版變成浮動視窗），不需要捲動畫面
-function openPlayer(embedSrc, titleText){
-	document.getElementById('playerIframe').src = embedSrc;
+// ================= 播放器 =================
+// 用 YouTube、Twitch 官方的播放器 API 建立播放器，才能知道「正在播放／暫停」並控制播放器
+// （API 載入失敗、或是 Twitch 剪輯這類 API 不支援的網址，退回一般內嵌播放器，只是無法顯示播放狀態）
+let activePlayer = null;	// { type:'youtube'|'twitch'|'iframe', instance }
+let playerState = 'idle';	// 'playing'：播放中／'paused'：暫停／'idle'：載入中、已結束或沒在播放
+let currentSongKey = null;	// 目前播放的歌曲（`語言::紀錄id`），點直播標題播放整場時為 null
+let loadToken = 0;			// 快速連點時，避免舊的非同步載入結果蓋掉新的
+
+let youtubeApiPromise = null;
+function loadYouTubeApi(){
+	if(window.YT && window.YT.Player) return Promise.resolve();
+	if(!youtubeApiPromise){
+		youtubeApiPromise = new Promise((resolve, reject) => {
+			const previous = window.onYouTubeIframeAPIReady;
+			window.onYouTubeIframeAPIReady = () => { if(previous) previous(); resolve(); };
+			const script = document.createElement('script');
+			script.src = 'https://www.youtube.com/iframe_api';
+			script.onerror = () => { youtubeApiPromise = null; reject(); };
+			document.head.appendChild(script);
+		});
+	}
+	return youtubeApiPromise;
+}
+
+let twitchApiPromise = null;
+function loadTwitchApi(){
+	if(window.Twitch && window.Twitch.Player) return Promise.resolve();
+	if(!twitchApiPromise){
+		twitchApiPromise = new Promise((resolve, reject) => {
+			const script = document.createElement('script');
+			script.src = 'https://player.twitch.tv/js/embed/v1.js';
+			script.onload = () => resolve();
+			script.onerror = () => { twitchApiPromise = null; reject(); };
+			document.head.appendChild(script);
+		});
+	}
+	return twitchApiPromise;
+}
+
+function setPlayerState(state){
+	playerState = state;
+	updatePlayButtons();
+}
+
+function destroyActivePlayer(){
+	if(activePlayer && activePlayer.type === 'youtube'){
+		try{ activePlayer.instance.destroy(); }catch(e){}
+	}
+	activePlayer = null;
+	document.getElementById('playerHost').innerHTML = ''; // Twitch 播放器沒有 destroy，直接清空容器
+}
+
+// 一般內嵌播放器（無法取得播放狀態）
+function mountPlainIframe(embedSrc){
+	const host = document.getElementById('playerHost');
+	host.innerHTML = '';
+	const iframe = document.createElement('iframe');
+	iframe.src = embedSrc;
+	iframe.allow = 'autoplay; encrypted-media; picture-in-picture';
+	iframe.allowFullscreen = true;
+	host.appendChild(iframe);
+	activePlayer = { type:'iframe', instance:iframe };
+}
+
+// 依網址載入影片：YouTube、Twitch（VOD／頻道）用官方 API；其他用一般內嵌
+async function loadMedia(url, seconds){
+	const token = ++loadToken;
+	destroyActivePlayer();
+	setPlayerState('idle');
+	const host = document.getElementById('playerHost');
+	const mount = document.createElement('div');
+	mount.id = `playerMount${token}`;
+	host.appendChild(mount);
+
+	const youtubeId = extractYouTubeId(url);
+	if(youtubeId){
+		try{ await loadYouTubeApi(); }catch(e){ if(token === loadToken) mountPlainIframe(buildEmbedSrc(url, seconds)); return; }
+		if(token !== loadToken) return;
+		const player = new YT.Player(mount.id, {
+			videoId: youtubeId,
+			width: '100%',
+			height: '100%',
+			playerVars: { start: seconds || 0, autoplay: 1, playsinline: 1 },
+			events: {
+				onStateChange: (e) => {
+					if(token !== loadToken) return;
+					if(e.data === YT.PlayerState.PLAYING) setPlayerState('playing');
+					else if(e.data === YT.PlayerState.PAUSED) setPlayerState('paused');
+					else if(e.data === YT.PlayerState.ENDED) setPlayerState('idle');
+				},
+			},
+		});
+		activePlayer = { type:'youtube', instance:player };
+		return;
+	}
+
+	const twitch = extractTwitchInfo(url);
+	if(twitch && twitch.type !== 'clip'){ // Twitch 剪輯官方 API 不支援，走下面的一般內嵌
+		try{ await loadTwitchApi(); }catch(e){ if(token === loadToken) mountPlainIframe(buildEmbedSrc(url, seconds)); return; }
+		if(token !== loadToken) return;
+		const options = { width:'100%', height:'100%', autoplay:true, parent:[window.location.hostname] };
+		if(twitch.type === 'video'){
+			options.video = twitch.id;
+			if(seconds) options.time = secondsToTwitchTime(seconds);
+		}else{
+			options.channel = twitch.id;
+		}
+		const player = new Twitch.Player(mount.id, options);
+		const onTwitch = (state) => () => { if(token === loadToken) setPlayerState(state); };
+		player.addEventListener(Twitch.Player.PLAY, onTwitch('playing'));
+		player.addEventListener(Twitch.Player.PLAYING, onTwitch('playing'));
+		player.addEventListener(Twitch.Player.PAUSE, onTwitch('paused'));
+		player.addEventListener(Twitch.Player.ENDED, onTwitch('idle'));
+		activePlayer = { type:'twitch', instance:player };
+		return;
+	}
+
+	mountPlainIframe(buildEmbedSrc(url, seconds));
+}
+
+// 播放／暫停切換（點正在播放那首歌的按鈕時）
+function togglePlayback(){
+	if(!activePlayer) return;
+	const player = activePlayer.instance;
+	try{
+		if(activePlayer.type === 'youtube'){
+			if(playerState === 'playing') player.pauseVideo(); else player.playVideo();
+		}else if(activePlayer.type === 'twitch'){
+			if(playerState === 'playing') player.pause(); else player.play();
+		}
+	}catch(e){} // 播放器還沒準備好時忽略
+}
+
+// 打開播放器面板：顯示方式交給 style.css（電腦版固定在左欄、手機／平板版變成浮動視窗），不需要捲動畫面
+function showPlayerPanel(titleText){
 	document.getElementById('playerPanelTitle').textContent = titleText;
 	document.getElementById('playerPanel').classList.add('is-active');
 	document.body.classList.add('player-open');
 }
 
+// 播放按鈕依狀態顯示：正在播放／暫停／播放
+function updatePlayButtons(){
+	document.querySelectorAll('.song-play-btn[data-song-key]').forEach(btn => {
+		const isCurrent = btn.dataset.songKey === currentSongKey;
+		const playing = isCurrent && playerState === 'playing';
+		const paused = isCurrent && playerState === 'paused';
+		btn.textContent = playing ? '♪ 正在播放' : paused ? '❚❚ 暫停' : '▶ 播放';
+		btn.classList.toggle('is-playing', playing);
+		btn.classList.toggle('is-paused', paused);
+	});
+}
+
 function playSong(lang, songId){
+	const key = `${lang}::${songId}`;
+	// 點的是目前這首：切換播放／暫停（一般內嵌播放器無法控制，就重新載入）
+	if(key === currentSongKey && activePlayer && activePlayer.type !== 'iframe'){
+		togglePlayback();
+		return;
+	}
 	const song = (SONGS[lang] || []).find(s => s.id === songId);
 	if(!song) return;
-	const embedSrc = buildEmbedSrc(resolveSongVideoUrl(song), song.timeSeconds);
-	if(!embedSrc) return;
+	const url = resolveSongVideoUrl(song);
+	if(!isPlayableUrl(url)) return;
 	const contextLabel = resolveSongContextLabel(song);
-	openPlayer(embedSrc, contextLabel ? `${contextLabel} － ${song.name}` : song.name);
+	currentSongKey = key;
+	showPlayerPanel(contextLabel ? `${contextLabel} － ${song.name}` : song.name);
+	loadMedia(url, song.timeSeconds);
 
 	// 送出 GA 自訂事件：記錄哪首歌被點播（GA 的自動影片追蹤抓不到動態更換的播放器，所以改由這裡主動送）
 	if(typeof gtag === 'function'){
@@ -250,10 +429,10 @@ window.playSong = playSong;
 // 直播紀錄：點直播標題時，在播放器播放整場直播（YouTube、Twitch）
 function playStream(streamId){
 	const stream = STREAMS[streamId];
-	if(!stream) return;
-	const embedSrc = buildEmbedSrc(stream.url, 0);
-	if(!embedSrc) return;
-	openPlayer(embedSrc, stream.title || '直播');
+	if(!stream || !isPlayableUrl(stream.url)) return;
+	currentSongKey = null; // 播放整場直播，不屬於任何一首歌
+	showPlayerPanel(stream.title || '直播');
+	loadMedia(stream.url, 0);
 
 	if(typeof gtag === 'function'){
 		gtag('event', 'play_stream', {
@@ -276,7 +455,10 @@ function renderStreamTitleLink(stream){
 }
 
 function closePlayer(){
-	document.getElementById('playerIframe').src = '';
+	loadToken++; // 讓還在載入中的播放器作廢
+	destroyActivePlayer();
+	currentSongKey = null;
+	setPlayerState('idle');
 	document.getElementById('playerPanel').classList.remove('is-active');
 	document.body.classList.remove('player-open');
 }
@@ -291,7 +473,12 @@ function switchView(view){
 	document.getElementById('streamsControls').style.display = view === 'streams' ? 'block' : 'none';
 	document.getElementById('songsView').style.display = view === 'songs' ? 'block' : 'none';
 	document.getElementById('streamsView').style.display = view === 'streams' ? 'block' : 'none';
-	if(view === 'songs') render(); else renderStreamsView();
+	if(view === 'songs'){
+		render();
+		refreshPageSize();
+	} else {
+		renderStreamsView();
+	}
 }
 window.switchView = switchView;
 
@@ -368,7 +555,7 @@ function renderSongRowSingle(s, hideLangBadge){
 			${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
 		</div>
 		${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
-		${canPlay ? `<button class="song-play-btn" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+		${canPlay ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
 	</div>`;
 }
 
@@ -378,6 +565,14 @@ function toggleSongExpand(catalogId){
 	render();
 }
 window.toggleSongExpand = toggleSongExpand;
+
+// 好聽音樂的隨機順序：每首歌第一次出現時抽一個隨機數當排序依據，
+// 這次瀏覽期間固定不變（翻頁、切換語言、搜尋都不會重新洗牌），重新整理網頁才會換新的順序
+const shuffleRank = new Map();
+function getShuffleRank(key){
+	if(!shuffleRank.has(key)) shuffleRank.set(key, Math.random());
+	return shuffleRank.get(key);
+}
 
 function render(){
 	renderLangBar();
@@ -402,8 +597,9 @@ function render(){
 		if(!groupsMap.has(key)) groupsMap.set(key, []);
 		groupsMap.get(key).push(s);
 	}
-	let groups = [...groupsMap.values()];
-	groups.sort((a,b) => a[0].name.localeCompare(b[0].name, 'zh-Hant'));
+	let groups = [...groupsMap.entries()];
+	groups.sort((a,b) => getShuffleRank(a[0]) - getShuffleRank(b[0])); // 隨機順序（每次打開網頁洗牌一次）
+	groups = groups.map(([, group]) => group);
 
 	statsLine.textContent = '';
 	songsStatsLine.textContent = `共 ${groups.length} 首`;
@@ -451,6 +647,7 @@ function render(){
 		}).join('') +
 		`</div>` +
 		renderPagination(totalPages);
+	updatePlayButtons();
 }
 
 function goToSongPage(p){
@@ -584,7 +781,7 @@ function renderSongRow(s){
 		<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
 		<span class="song-lang-badge">${escapeHtml(s.lang)}</span>
 		<div class="song-sub">${escapeHtml(s.artist || '')}</div>
-		${isPlayableUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+		${isPlayableUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
 	</div>`;
 }
 
@@ -687,6 +884,7 @@ function renderStreamsView(){
 	}
 	html += `</div>`;
 	streamsContent.innerHTML = html;
+	updatePlayButtons();
 }
 
 document.getElementById('streamSearchInput').addEventListener('input', renderStreamsView);
@@ -739,9 +937,14 @@ function updatePlayerTop(){
 	const top = column.getBoundingClientRect().top + window.scrollY; // 換算成頁面位置，不受目前捲動位置影響
 	document.documentElement.style.setProperty('--player-top', `${Math.round(top)}px`);
 }
-// 上方控制區高度改變時（切換頁籤、標籤換行、資料載入完成）重新計算
-new ResizeObserver(updatePlayerTop).observe(document.querySelector('.controls'));
-window.addEventListener('resize', updatePlayerTop);
+// 上方控制區高度改變時（切換頁籤、標籤換行、資料載入完成）、視窗大小改變時，
+// 重新計算播放器大小與好聽音樂每頁筆數
+function onLayoutChange(){
+	updatePlayerTop();
+	refreshPageSize();
+}
+new ResizeObserver(onLayoutChange).observe(document.querySelector('.controls'));
+window.addEventListener('resize', onLayoutChange);
 
 // 回到最上方按鈕：往下捲超過 600px 才顯示
 const backToTopBtn = document.getElementById('backToTop');
