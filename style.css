@@ -96,6 +96,12 @@ h1{
 	padding:11px 16px; border-bottom:1px solid var(--line);
 }
 .song-row:last-child{ border-bottom:none; }
+/* 歌曲列內的分組容器（.song-main：左邊文字內容、.song-head：歌名＋標籤）：
+	電腦／平板版設為 contents（等於沒有這兩層），版面跟原本一樣；手機版另外排版 */
+.song-main,
+.song-head{ display:contents; }
+/* 唱過多次的歌，展開後的區塊 */
+.song-group-children{ padding-left:20px; border-left:2px solid var(--line); margin:0 0 8px 20px; }
 /*
 	歌名優先：空間不夠時歌名不壓縮，由副標讓出空間換行
 	歌名只有本身超過一列的一半寬度時才會換行
@@ -233,17 +239,79 @@ h1{
 ========================================================= */
 @media (max-width:767px){
 	.wrap{ padding:32px 14px 80px; }
-	.song-row{ flex-direction:column; align-items:flex-start; gap:4px; }
+	.song-row{ flex-direction:column; align-items:flex-start; gap:4px; padding:11px 12px; } /* 左右內距縮小，多留空間給歌名 */
 	.song-sub{ max-width:100%; text-align:left; }
 	.song-name{ max-width:100%; }
 	.song-badges{ max-width:100%; } /* 手機版標籤太多時可以左右滑動 */
-	/* 月份按鈕不換行，改成左右滑動，避免 12 個月擠成好幾排 */
+	/* 語言、月份按鈕不換行，改成左右滑動，避免擠成好幾排 */
+	.lang-bar,
 	.month-bar{
 		flex-wrap:nowrap; overflow-x:auto;
 		scrollbar-width:none; -ms-overflow-style:none;
 	}
+	.lang-bar::-webkit-scrollbar,
 	.month-bar::-webkit-scrollbar{ display:none; }
+	.lang-bar .chip,
 	.month-bar .chip{ flex-shrink:0; }
+
+	/* ---------- 歌曲列 ----------
+		song-row--single：好聽音樂只唱過一次的歌
+		song-row--stream：直播紀錄展開後的歌曲（排法跟 single 相同）
+		song-row--group：好聽音樂唱過多次的歌（收合列）
+		song-row--child：好聽音樂唱過多次的歌，展開後的每一筆
+	*/
+	/*
+		歌名＋標籤排在同一行：歌名優先完整顯示
+		空間不夠時先由標籤讓出空間（變成左右滑動），標籤區至少保留約一個標籤的寬度，真的還不夠歌名才換行
+		align-items:baseline：歌名換行時，標籤跟歌名第一行對齊
+	*/
+	.song-row--single .song-head,
+	.song-row--stream .song-head,
+	.song-row--group .song-head{
+		display:flex; align-items:baseline; gap:8px; min-width:0;
+	}
+	.song-row--single .song-name,
+	.song-row--stream .song-name,
+	.song-row--group .song-name{ flex:0 1 auto; min-width:0; max-width:none; margin-right:0; }
+	.song-row--single .song-badges,
+	.song-row--stream .song-badges,
+	.song-row--group .song-badges{ flex:0 10000 auto; min-width:3em; } /* 10000：壓縮時標籤遠比歌名先讓出空間 */
+
+	/*
+		只唱過一次、展開後的每一筆：Grid 兩欄，左邊文字內容、右邊播放按鈕
+		左邊內容整組垂直置中，不管一行或兩行都會跟播放按鈕對齊
+	*/
+	.song-row--single,
+	.song-row--stream,
+	.song-row--child{
+		display:grid;
+		grid-template-columns:minmax(0, 1fr) auto;
+		column-gap:12px;
+		align-items:center;
+	}
+	.song-row--single .song-main,
+	.song-row--stream .song-main,
+	.song-row--child .song-main{
+		display:flex; flex-direction:column; gap:4px; min-width:0;
+	}
+
+	/* 只唱過一次、直播紀錄的歌曲：上排歌名＋標籤、下排副標（照 HTML 順序即可） */
+
+	/* 展開後的每一筆：不顯示歌名（收合列已經有），上排副標、下排標籤 */
+	.song-row--child .song-name{ display:none; }
+	.song-row--child .song-head{ display:flex; min-width:0; }
+	.song-row--child .song-head:not(:has(.song-lang-badge)){ display:none; } /* 沒有標籤時整行隱藏，不佔間距 */
+	.song-row--child .song-sub{ order:-1; }
+	.song-group-children{ padding-left:12px; margin-left:12px; }
+
+	/* 唱過多次（收合列）：左邊歌名＋標籤，右邊副標＋「共 X 次」 */
+	.song-row--group{ flex-direction:row; align-items:center; gap:10px; }
+	.song-row--group .song-head{ flex:1 1 auto; }
+	.song-row--group .song-sub{ flex:0 1 auto; max-width:35%; text-align:right; }
+	.song-row--group .chip{ flex:none; }
+
+	/* 播放按鈕加大，方便手指點（至少 44px 高） */
+	.song-play-btn{ min-height:44px; padding:8px 14px; font-size:.86rem; min-width:6.8em; }
 
 	.player-panel.is-active{
 		position:fixed; z-index:50;

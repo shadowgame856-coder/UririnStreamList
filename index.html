@@ -37,7 +37,7 @@
 				<input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
 			</div>
 			<div class="stats" id="songsStatsLine"></div>
-			<div class="chip-bar" id="langBar"></div>
+			<div class="chip-bar lang-bar" id="langBar"></div>
 		</div>
 
 		<div id="streamsControls" style="display:none;">
@@ -552,13 +552,20 @@ function renderSongRowSingle(s, hideLangBadge){
 	const isDuetStandalone = !stream && (s.tags||[]).some(t => t.toLowerCase() === '合唱');
 	const featNames = (isDuetStandalone && s.feat) ? s.feat.split(/[,，]/).map(a => a.trim()).filter(Boolean) : [];
 	const subLabel = stream ? (stream.title || '') : (featNames.length ? featNames.join('、') : '');
-	return `<div class="song-row">
-		<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-		<div class="song-badges">
-			${hideLangBadge ? '' : `<span class="song-lang-badge">${escapeHtml(s.lang)}</span>`}
-			${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+	// song-row--single：只唱過一次的歌；song-row--child：唱過多次的歌展開後的每一筆
+	// .song-main 包住左邊的文字內容、.song-head 包住歌名跟標籤，給手機版排版用
+	// （電腦／平板版這兩層設為 display:contents，等於沒有這兩層，版面跟原本一樣）
+	return `<div class="song-row ${hideLangBadge ? 'song-row--child' : 'song-row--single'}">
+		<div class="song-main">
+			<div class="song-head">
+				<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+				<div class="song-badges">
+					${hideLangBadge ? '' : `<span class="song-lang-badge">${escapeHtml(s.lang)}</span>`}
+					${(s.tags && s.tags.length) ? s.tags.map(t => `<span class="song-lang-badge">${escapeHtml(t)}</span>`).join('') : ''}
+				</div>
+			</div>
+			${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
 		</div>
-		${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
 		${canPlay ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
 	</div>`;
 }
@@ -632,10 +639,12 @@ function render(){
 			const catalogId = first.catalogId || `${first.lang}::${first.name}`;
 			const expanded = expandedSongs.has(catalogId);
 
-			let html = `<div class="song-row" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
-				<div class="song-name">${escapeHtml(first.name)}</div>
-				<div class="song-badges">
-					<span class="song-lang-badge">${escapeHtml(first.lang)}</span>
+			let html = `<div class="song-row song-row--group" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
+				<div class="song-head">
+					<div class="song-name">${escapeHtml(first.name)}</div>
+					<div class="song-badges">
+						<span class="song-lang-badge">${escapeHtml(first.lang)}</span>
+					</div>
 				</div>
 				<div class="song-sub">${escapeHtml(first.artist || '')}</div>
 				<span class="chip" style="padding:5px 12px;font-size:.8rem;">共 ${group.length} 次 ${expanded ? '▲' : '▶'}</span>
@@ -643,7 +652,7 @@ function render(){
 
 			if(expanded){
 				const sorted = [...group].sort(compareSongInstances);
-				html += `<div style="padding-left:20px;border-left:2px solid var(--line);margin:0 0 8px 20px;">` +
+				html += `<div class="song-group-children">` +
 					sorted.map(s => renderSongRowSingle(s, true)).join('') +
 					`</div>`;
 			}
@@ -780,11 +789,18 @@ function setStreamTag(tag){
 }
 window.setStreamTag = setStreamTag;
 
+// 直播紀錄展開後的歌曲列（song-row--stream）：結構跟好聽音樂的歌曲列一樣，手機版共用同一套排版
 function renderSongRow(s){
-	return `<div class="song-row">
-		<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
-		<span class="song-lang-badge">${escapeHtml(s.lang)}</span>
-		<div class="song-sub">${escapeHtml(s.artist || '')}</div>
+	return `<div class="song-row song-row--stream">
+		<div class="song-main">
+			<div class="song-head">
+				<div class="song-name">${escapeHtml(s.name)}${s.note ? `<span style="color:var(--muted);font-size:.82rem;margin-left:6px;">（${escapeHtml(s.note)}）</span>` : ''}</div>
+				<div class="song-badges">
+					<span class="song-lang-badge">${escapeHtml(s.lang)}</span>
+				</div>
+			</div>
+			${s.artist ? `<div class="song-sub">${escapeHtml(s.artist)}</div>` : ''}
+		</div>
 		${isPlayableUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
 	</div>`;
 }
