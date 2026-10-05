@@ -123,13 +123,21 @@ h1{
 		一般：▶ 播放
 		.is-playing：♪ 正在播放（點了暫停）
 		.is-paused：❚❚ 暫停（點了繼續播放）
-	min-width：三種文字寬度不同，固定最小寬度避免切換時整列跳動
+	三種文字（.btn-label）疊在同一格 Grid 裡，只顯示目前狀態那一種；
+	按鈕寬度自動以最寬的文字為準，不管哪種狀態、裝置、字型，寬度都一樣
 */
 .song-play-btn{
+	display:inline-grid; place-items:center;
 	background:var(--gold); color:#22190a; border:1px solid var(--gold); border-radius:6px;
 	padding:5px 11px; font-size:.78rem; font-weight:700; cursor:pointer; flex-shrink:0;
-	font-family:inherit; min-width:7.4em; text-align:center; white-space:nowrap;
+	font-family:inherit; white-space:nowrap;
 }
+.song-play-btn > .btn-label{ grid-area:1 / 1; visibility:hidden; }
+.song-play-btn > .btn-label--play{ visibility:visible; }
+.song-play-btn.is-playing > .btn-label--play,
+.song-play-btn.is-paused > .btn-label--play{ visibility:hidden; }
+.song-play-btn.is-playing > .btn-label--playing,
+.song-play-btn.is-paused > .btn-label--paused{ visibility:visible; }
 .song-play-btn:hover{ filter:brightness(1.08); }
 .song-play-btn.is-playing{ background:var(--rose); border-color:var(--rose); color:#22190a; }
 .song-play-btn.is-paused{ background:transparent; color:var(--gold); }
@@ -311,7 +319,7 @@ h1{
 	.song-row--group .chip{ flex:none; }
 
 	/* 播放按鈕加大，方便手指點（至少 44px 高） */
-	.song-play-btn{ min-height:44px; padding:8px 14px; font-size:.86rem; min-width:6.8em; }
+	.song-play-btn{ min-height:44px; padding:8px 12px; font-size:.86rem; }
 
 	.player-panel.is-active{
 		position:fixed; z-index:50;

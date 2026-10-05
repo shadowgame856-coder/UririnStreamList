@@ -381,13 +381,18 @@ function showPlayerPanel(titleText){
 	document.body.classList.add('player-open');
 }
 
-// 播放按鈕依狀態顯示：正在播放／暫停／播放
+// 播放按鈕的三種文字疊在同一個位置，CSS 依狀態只顯示一種；
+// 按鈕寬度會以最寬的那種文字為準，切換狀態時寬度不會改變
+const PLAY_BTN_LABELS = '<span class="btn-label btn-label--play">▶ 播放</span>'
+	+ '<span class="btn-label btn-label--playing">♪ 正在播放</span>'
+	+ '<span class="btn-label btn-label--paused">❚❚ 暫停</span>';
+
+// 播放按鈕依狀態切換 class：正在播放（is-playing）／暫停（is-paused）／一般
 function updatePlayButtons(){
 	document.querySelectorAll('.song-play-btn[data-song-key]').forEach(btn => {
 		const isCurrent = btn.dataset.songKey === currentSongKey;
 		const playing = isCurrent && playerState === 'playing';
 		const paused = isCurrent && playerState === 'paused';
-		btn.textContent = playing ? '♪ 正在播放' : paused ? '❚❚ 暫停' : '▶ 播放';
 		btn.classList.toggle('is-playing', playing);
 		btn.classList.toggle('is-paused', paused);
 	});
@@ -566,7 +571,7 @@ function renderSongRowSingle(s, hideLangBadge){
 			</div>
 			${subLabel ? `<div class="song-sub">${escapeHtml(subLabel)}</div>` : ''}
 		</div>
-		${canPlay ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+		${canPlay ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="playSong('${s.lang}','${s.id}')">${PLAY_BTN_LABELS}</button>` : ''}
 	</div>`;
 }
 
@@ -801,7 +806,7 @@ function renderSongRow(s){
 			</div>
 			${s.artist ? `<div class="song-sub">${escapeHtml(s.artist)}</div>` : ''}
 		</div>
-		${isPlayableUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">▶ 播放</button>` : ''}
+		${isPlayableUrl(resolveSongVideoUrl(s)) ? `<button class="song-play-btn" data-song-key="${s.lang}::${s.id}" onclick="event.stopPropagation();playSong('${s.lang}','${s.id}')">${PLAY_BTN_LABELS}</button>` : ''}
 	</div>`;
 }
 
