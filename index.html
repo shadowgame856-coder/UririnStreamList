@@ -6,6 +6,21 @@
 <script src="ga.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="幽李鈴 Uririn 的歌回與直播紀錄：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
+<!-- 分享連結時的預覽卡片（Discord、LINE、X、Facebook 等會讀取這些設定） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="幽李鈴 Uririn">
+<meta property="og:title" content="幽李鈴 Uririn">
+<meta property="og:description" content="幽李鈴 Uririn 的歌回與直播紀錄：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
+<meta property="og:locale" content="zh_TW">
+<meta name="twitter:card" content="summary">
+<!--
+	要加預覽圖片時：
+	1. 準備一張 1200×630 的圖片（例如 og-image.png）上傳到 repo，跟 index.html 放在同一層
+	2. 取消下面這行的註解，網址改成圖片的完整網址（要包含 https://）
+	3. 上面的 twitter:card 改成 summary_large_image，X 才會顯示大圖
+-->
+<!-- <meta property="og:image" content="https://shadowgame856-coder.github.io/repo名稱/og-image.png"> -->
 <title>幽李鈴 Uririn</title>
 <!-- 分頁小圖示：用 SVG 包表情符號，換圖示只要改裡面的 👻 -->
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>👻</text></svg>">
@@ -35,6 +50,7 @@
 		<div id="songsControls">
 			<div class="searchbar">
 				<input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
+				<button type="button" class="search-clear" onclick="clearSearch('searchInput')" aria-label="清除搜尋" title="清除搜尋">✕</button>
 			</div>
 			<div class="stats" id="songsStatsLine"></div>
 			<div class="chip-bar lang-bar" id="langBar"></div>
@@ -45,6 +61,7 @@
 			<div class="chip-bar month-bar" id="monthBar"></div>
 			<div class="searchbar">
 				<input type="text" id="streamSearchInput" placeholder="搜尋直播標題、來賓…">
+				<button type="button" class="search-clear" onclick="clearSearch('streamSearchInput')" aria-label="清除搜尋" title="清除搜尋">✕</button>
 			</div>
 			<div class="stats" id="streamsStatsLine"></div>
 			<div class="chip-bar" id="streamTagBar"></div>
@@ -60,7 +77,13 @@
 			</div>
 			<div class="player-panel-head">
 				<span class="player-panel-title" id="playerPanelTitle"></span>
-				<button class="btn ghost" onclick="closePlayer()">✕</button>
+				<div class="player-panel-actions">
+					<!-- 縮小時才出現的播放／暫停（手機／平板） -->
+					<button class="btn ghost player-mini-toggle" id="playerMiniToggle" onclick="togglePlayback()" aria-label="暫停">❚❚</button>
+					<!-- 縮小／展開（手機／平板） -->
+					<button class="btn ghost player-minimize" id="playerMinimizeBtn" onclick="togglePlayerMinimized()" aria-label="縮小播放器" title="縮小播放器">▾</button>
+					<button class="btn ghost" onclick="closePlayer()" aria-label="關閉播放器" title="關閉播放器">✕</button>
+				</div>
 			</div>
 			<div class="player-frame-wrap">
 				<div id="playerHost"></div><!-- 播放器由 JS 依平台建立（YouTube／Twitch 官方播放器 API） -->
@@ -369,10 +392,23 @@ function togglePlayback(){
 		if(activePlayer.type === 'youtube'){
 			if(playerState === 'playing') player.pauseVideo(); else player.playVideo();
 		}else if(activePlayer.type === 'twitch'){
-			if(playerState === 'playing') player.pause(); else player.play();
+			if(playerState === 'playing'){
+				player.pause();
+			}else if(playerMinimized){
+				// Twitch 規定播放器要在畫面上看得到，才允許網頁讓它繼續播放；
+				// 縮小時影片在畫面外，所以先展開播放器，等它顯示出來再繼續播放
+				setPlayerMinimized(false);
+				requestAnimationFrame(() => requestAnimationFrame(() => {
+					try{ player.play(); }catch(e){}
+				}));
+			}else{
+				player.play();
+			}
 		}
 	}catch(e){} // 播放器還沒準備好時忽略
 }
+
+window.togglePlayback = togglePlayback;
 
 // 打開播放器面板：顯示方式交給 style.css（電腦版固定在左欄、手機／平板版變成浮動視窗），不需要捲動畫面
 function showPlayerPanel(titleText){
@@ -396,7 +432,29 @@ function updatePlayButtons(){
 		btn.classList.toggle('is-playing', playing);
 		btn.classList.toggle('is-paused', paused);
 	});
+	// 縮小播放器上的播放／暫停按鈕：一般內嵌播放器無法控制，就不顯示
+	const mini = document.getElementById('playerMiniToggle');
+	const controllable = !!activePlayer && activePlayer.type !== 'iframe';
+	mini.classList.toggle('is-unavailable', !controllable);
+	mini.textContent = playerState === 'playing' ? '❚❚' : '▶';
+	mini.setAttribute('aria-label', playerState === 'playing' ? '暫停' : '播放');
 }
+
+// 手機／平板：播放器縮小成只剩標題列（影片移到畫面外繼續播放）
+let playerMinimized = false;
+function setPlayerMinimized(minimized){
+	playerMinimized = minimized;
+	document.getElementById('playerPanel').classList.toggle('is-minimized', minimized);
+	document.body.classList.toggle('player-minimized', minimized);
+	const btn = document.getElementById('playerMinimizeBtn');
+	btn.textContent = minimized ? '▴' : '▾';
+	btn.setAttribute('aria-label', minimized ? '展開播放器' : '縮小播放器');
+	btn.title = minimized ? '展開播放器' : '縮小播放器';
+}
+function togglePlayerMinimized(){
+	setPlayerMinimized(!playerMinimized);
+}
+window.togglePlayerMinimized = togglePlayerMinimized;
 
 function playSong(lang, songId){
 	const key = `${lang}::${songId}`;
@@ -460,6 +518,7 @@ function closePlayer(){
 	destroyActivePlayer();
 	currentSongKey = null;
 	setPlayerState('idle');
+	setPlayerMinimized(false);
 	document.getElementById('playerPanel').classList.remove('is-active');
 	document.body.classList.remove('player-open');
 }
@@ -488,14 +547,27 @@ function switchView(view){
 	} else {
 		renderStreamsView();
 	}
+	syncUrl(true);
 }
 window.switchView = switchView;
 
 // ================= 好聽音樂（歌單）=================
+// 某個語言有幾首「不重複的歌」：算法跟歌單的「共 X 首」一致（同一首唱多次只算一首、排除會限場次）
+function countUniqueSongs(lang){
+	const keys = new Set();
+	for(const song of SONGS[lang]){
+		if(isRestrictedStream(STREAMS[song.streamId])) continue;
+		keys.add(song.catalogId || `${lang}::${song.name}`);
+	}
+	return keys.size;
+}
+
 function renderLangBar(){
-	let html = `<span class="chip${activeLang===null?' active':''}" onclick="setLang(null)">全部</span>`;
+	let html = `<span role="button" tabindex="0" class="chip${activeLang===null?' active':''}" onclick="setLang(null)">全部</span>`;
 	for(const lang of LANGUAGES){
-		html += `<span class="chip${activeLang===lang?' active':''}" onclick="setLang('${lang}')">${escapeHtml(lang)}<span style="opacity:.7;margin-left:4px;font-size:.85em;">${SONGS[lang].length}</span></span>`;
+		const count = countUniqueSongs(lang);
+		if(count === 0 && activeLang !== lang) continue; // 沒有歌的語言不顯示按鈕
+		html += `<span role="button" tabindex="0" class="chip${activeLang===lang?' active':''}" onclick="setLang('${lang}')">${escapeHtml(lang)}<span style="opacity:.7;margin-left:4px;font-size:.85em;">${count}</span></span>`;
 	}
 	langBarEl.innerHTML = html;
 }
@@ -504,6 +576,7 @@ function setLang(lang){
 	activeLang = lang;
 	currentPage = 1;
 	render();
+	syncUrl(true);
 }
 window.setLang = setLang;
 
@@ -644,7 +717,7 @@ function render(){
 			const catalogId = first.catalogId || `${first.lang}::${first.name}`;
 			const expanded = expandedSongs.has(catalogId);
 
-			let html = `<div class="song-row song-row--group" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
+			let html = `<div class="song-row song-row--group" role="button" tabindex="0" aria-expanded="${expanded}" style="cursor:pointer;" onclick="toggleSongExpand('${catalogId}')">
 				<div class="song-head">
 					<div class="song-name">${escapeHtml(first.name)}</div>
 					<div class="song-badges">
@@ -702,13 +775,14 @@ function renderPagination(totalPages, isTop){
 	return html;
 }
 
-searchInput.addEventListener('input', ()=>{ currentPage = 1; render(); });
+searchInput.addEventListener('input', ()=>{ currentPage = 1; render(); syncUrlLater(); });
 
 // ================= 直播紀錄（依年份分頁）=================
 function setYear(year){
 	activeYear = year;
 	activeMonth = null; // 換年份時，月份篩選回到「全部」
 	renderStreamsView();
+	syncUrl(true);
 }
 window.setYear = setYear;
 
@@ -721,6 +795,7 @@ function monthOf(date){
 function setMonth(month){
 	activeMonth = month;
 	renderStreamsView();
+	syncUrl(true);
 }
 window.setMonth = setMonth;
 
@@ -734,9 +809,9 @@ function renderMonthBar(yearStreams){
 	const months = [...counts.keys()].sort((a,b) => b - a);
 	const bar = document.getElementById('monthBar');
 	if(months.length === 0){ bar.innerHTML = ''; return; }
-	let html = `<span class="chip${activeMonth===null?' active':''}" onclick="setMonth(null)">全部月份</span>`;
+	let html = `<span role="button" tabindex="0" class="chip${activeMonth===null?' active':''}" onclick="setMonth(null)">全部月份</span>`;
 	for(const m of months){
-		html += `<span class="chip${activeMonth===m?' active':''}" onclick="setMonth(${m})">${m} 月</span>`;
+		html += `<span role="button" tabindex="0" class="chip${activeMonth===m?' active':''}" onclick="setMonth(${m})">${m} 月</span>`;
 	}
 	bar.innerHTML = html;
 }
@@ -776,9 +851,9 @@ function allStreamTags(){
 function renderStreamTagBar(){
 	const tags = allStreamTags();
 	const bar = document.getElementById('streamTagBar');
-	let html = `<span class="chip${activeStreamTag===null?' active':''}" onclick="setStreamTag(null)">全部</span>`;
+	let html = `<span role="button" tabindex="0" class="chip${activeStreamTag===null?' active':''}" onclick="setStreamTag(null)">全部</span>`;
 	for(const t of tags){
-		html += `<span class="chip${activeStreamTag===t?' active':''}" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`;
+		html += `<span role="button" tabindex="0" class="chip${activeStreamTag===t?' active':''}" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`;
 	}
 	bar.innerHTML = html;
 }
@@ -791,6 +866,7 @@ function setStreamTag(tag){
 		activeStreamTag = canonical || tag;
 	}
 	renderStreamsView();
+	syncUrl(true);
 }
 window.setStreamTag = setStreamTag;
 
@@ -892,7 +968,7 @@ function renderStreamsView(){
 		} else if(songs.length === 1){
 			songsSectionHtml = `<div class="song-list">${renderSongRow(songs[0])}</div>`;
 		} else if(songs.length > 1){
-			const toggleRow = `<div class="song-row song-toggle-row" style="cursor:pointer;" onclick="toggleStreamExpand('${stream.id}')">
+			const toggleRow = `<div class="song-row song-toggle-row" role="button" tabindex="0" aria-expanded="${expanded}" style="cursor:pointer;" onclick="toggleStreamExpand('${stream.id}')">
 				<div class="song-sub" style="text-align:left;">${expanded ? '▲ 收合' : '▶ 展開'} 共 ${songs.length} 首歌曲</div>
 			</div>`;
 			songsSectionHtml = `<div class="song-list">${toggleRow}${expanded ? songs.map(s => renderSongRow(s)).join('') : ''}</div>`;
@@ -901,7 +977,7 @@ function renderStreamsView(){
 		html += `<div class="stream-block">
 			<div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
 			<div class="stream-block-title">${renderStreamTitleLink(stream)}</div>
-			${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+			${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span role="button" tabindex="0" class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
 			${hostName ? `<div class="stream-meta" style="margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
 			${guestsDisplay ? `<div class="stream-meta" style="margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}
 			${songsSectionHtml}
@@ -912,7 +988,16 @@ function renderStreamsView(){
 	updatePlayButtons();
 }
 
-document.getElementById('streamSearchInput').addEventListener('input', renderStreamsView);
+document.getElementById('streamSearchInput').addEventListener('input', () => { renderStreamsView(); syncUrlLater(); });
+
+// 搜尋框的「✕」：清空文字，觸發跟打字一樣的更新流程，並把焦點留在搜尋框
+function clearSearch(inputId){
+	const input = document.getElementById(inputId);
+	input.value = '';
+	input.dispatchEvent(new Event('input'));
+	input.focus();
+}
+window.clearSearch = clearSearch;
 
 // ================= 讀取同資料夾的 json 檔案 =================
 async function fetchJson(path){
@@ -934,13 +1019,97 @@ async function loadAllData(){
 	activeYear = STREAM_YEARS.length ? sortedYears()[0] : null;
 }
 
+// ================= 鍵盤操作 =================
+//	Enter／空白鍵：觸發用 Tab 選到的快捷按鈕、展開列（role="button" 的元素）
+//	Esc：關閉播放器
+document.addEventListener('keydown', (e) => {
+	if(e.key === 'Escape'){
+		if(document.getElementById('playerPanel').classList.contains('is-active')) closePlayer();
+		return;
+	}
+	const el = e.target;
+	if((e.key === 'Enter' || e.key === ' ') && el.getAttribute && el.getAttribute('role') === 'button'){
+		e.preventDefault(); // 避免空白鍵捲動頁面
+		const signature = el.getAttribute('onclick');
+		el.click();
+		// 點完畫面會重畫，把焦點放回重畫後的同一個按鈕，方便繼續用鍵盤操作
+		const again = [...document.querySelectorAll('[role="button"]')].find(x => x.getAttribute('onclick') === signature);
+		if(again) again.focus();
+	}
+});
+
+// ================= 網址狀態 =================
+// 把目前的頁籤與篩選條件記在網址上（例如 ?tab=streams&year=2025&month=3），
+// 重新整理或分享網址時會還原同樣的畫面；瀏覽器的「上一頁」可以退回上一個篩選狀態
+// 頁數不記錄：每頁筆數依裝置高度計算，同一個頁數在不同裝置上的內容不一樣
+//	好聽音樂：lang（語言）、q（搜尋）
+//	直播紀錄：tab=streams、year（年份，最新年份時省略）、month（月份）、tag（標籤）、q（搜尋）
+let applyingUrlState = false; // 正在從網址還原狀態時，不要再寫回網址
+
+function buildUrlParams(){
+	const params = new URLSearchParams();
+	if(currentView === 'streams'){
+		params.set('tab', 'streams');
+		if(activeYear && activeYear !== sortedYears()[0]) params.set('year', activeYear);
+		if(activeMonth !== null) params.set('month', activeMonth);
+		if(activeStreamTag) params.set('tag', activeStreamTag);
+		const q = document.getElementById('streamSearchInput').value.trim();
+		if(q) params.set('q', q);
+	}else{
+		if(activeLang) params.set('lang', activeLang);
+		const q = searchInput.value.trim();
+		if(q) params.set('q', q);
+	}
+	return params;
+}
+
+// push：true 新增一筆瀏覽紀錄（點按鈕切換時），false 取代目前這筆（搜尋框打字時）
+function syncUrl(push){
+	if(applyingUrlState) return;
+	const query = buildUrlParams().toString();
+	const url = window.location.pathname + (query ? `?${query}` : '') + window.location.hash;
+	if(url === window.location.pathname + window.location.search + window.location.hash) return;
+	if(push) history.pushState(null, '', url);
+	else history.replaceState(null, '', url);
+}
+
+// 搜尋框打字時，停下來 400ms 才更新網址
+let syncUrlTimer = null;
+function syncUrlLater(){
+	clearTimeout(syncUrlTimer);
+	syncUrlTimer = setTimeout(() => syncUrl(false), 400);
+}
+
+// 依網址還原畫面（打開網頁時、按「上一頁／下一頁」時）；網址裡不合法的值會被忽略
+function applyUrlState(){
+	applyingUrlState = true;
+	const params = new URLSearchParams(window.location.search);
+	const view = params.get('tab') === 'streams' ? 'streams' : 'songs';
+	if(view === 'streams'){
+		const year = params.get('year');
+		activeYear = STREAM_YEARS.includes(year) ? year : (STREAM_YEARS.length ? sortedYears()[0] : null);
+		const month = parseInt(params.get('month'), 10);
+		activeMonth = (month >= 1 && month <= 12) ? month : null;
+		const tag = params.get('tag');
+		activeStreamTag = tag ? (allStreamTags().find(t => t.toLowerCase() === tag.toLowerCase()) || null) : null;
+		document.getElementById('streamSearchInput').value = params.get('q') || '';
+	}else{
+		const lang = params.get('lang');
+		activeLang = LANGUAGES.includes(lang) ? lang : null;
+		searchInput.value = params.get('q') || '';
+		currentPage = 1;
+	}
+	switchView(view);
+	applyingUrlState = false;
+}
+window.addEventListener('popstate', applyUrlState);
+
 async function init(){
 	try{
 		await loadAllData();
 		document.getElementById('loadingState').style.display = 'none';
 		document.getElementById('mainApp').style.display = ''; // 交給 style.css 決定版面（電腦版為左右兩欄）
-		updateDocumentTitle();
-		render();
+		applyUrlState(); // 依網址還原頁籤與篩選條件（沒有參數時就是預設畫面）
 	}catch(e){
 		document.getElementById('loadingState').style.display = 'none';
 		document.getElementById('errorState').style.display = 'block';

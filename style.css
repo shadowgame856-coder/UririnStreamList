@@ -51,10 +51,19 @@ h1{
 }
 
 /* ---------- 搜尋框 ---------- */
-.searchbar{ margin-top:22px; }
+.searchbar{ margin-top:22px; position:relative; }
+/* 搜尋框右邊的「✕」清除按鈕：有輸入文字時才顯示（沒有文字時 placeholder 會顯示，以此判斷） */
+.search-clear{
+	position:absolute; right:6px; top:50%; transform:translateY(-50%);
+	width:32px; height:32px; border:none; border-radius:50%;
+	display:flex; align-items:center; justify-content:center;
+	background:transparent; color:var(--muted); font-size:.9rem; font-family:inherit; cursor:pointer;
+}
+.search-clear:hover{ color:var(--text); background:var(--surface-2); }
+.searchbar input:placeholder-shown + .search-clear{ display:none; }
 .searchbar input{
 	width:100%; background:var(--surface); border:1px solid var(--line);
-	color:var(--text); border-radius:8px; padding:12px 14px;
+	color:var(--text); border-radius:8px; padding:12px 44px 12px 14px; /* 右邊留空間給清除按鈕 */
 	font-size:1rem; font-family:inherit;
 }
 .searchbar input:focus{ outline:2px solid var(--gold); outline-offset:1px; }
@@ -188,6 +197,10 @@ h1{
 	flex-shrink:0;
 }
 .btn.ghost:hover{ color:var(--rose); border-color:var(--rose); }
+.player-panel-actions{ display:flex; gap:6px; flex-shrink:0; }
+/* 縮小、縮小時的播放／暫停：只在手機／平板顯示（見下方 max-width:992px） */
+.player-minimize,
+.player-mini-toggle{ display:none; }
 
 /* ---------- 直播紀錄時間軸 ---------- */
 .stream-timeline{
@@ -226,6 +239,21 @@ h1{
 }
 .back-to-top.is-visible{ opacity:1; visibility:visible; transform:none; }
 .back-to-top:hover{ border-color:var(--gold); }
+
+/* ---------- 鍵盤操作 ----------
+	用鍵盤（Tab）選到時顯示金色外框；滑鼠點擊時不會出現
+*/
+.chip:focus-visible,
+.year-btn:focus-visible,
+.view-tab:focus-visible,
+.page-btn:focus-visible,
+.song-play-btn:focus-visible,
+.btn:focus-visible,
+.search-clear:focus-visible,
+.back-to-top:focus-visible,
+[role="button"]:focus-visible{ outline:2px solid var(--gold); outline-offset:2px; }
+/* 歌曲列在有圓角裁切的清單裡，外框改畫在內側才不會被切掉 */
+.song-row[role="button"]:focus-visible{ outline-offset:-2px; }
 
 /* ---------- 狀態訊息 ---------- */
 .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
@@ -328,10 +356,31 @@ h1{
 		box-shadow:0 -6px 24px rgba(0,0,0,.55);
 	}
 	.player-panel-head{ margin-bottom:8px; }
+	.player-panel-actions .btn{ min-width:40px; min-height:40px; } /* 標題列按鈕加大，方便手指點 */
 	/* 播放器開著時，頁面底部留出播放器的高度，最後幾首歌才不會被擋住 */
 	body.player-open .wrap{ padding-bottom:calc((100vw - 36px) * .5625 + 90px); }
 	.back-to-top{ right:16px; bottom:16px; }
 	body.player-open .back-to-top{ bottom:calc((100vw - 36px) * .5625 + 86px); } /* 播放器上方 */
+}
+
+
+/* =========================================================
+	手機＋平板：992px 以下（播放器都是浮動視窗）
+	- 播放器可以縮小成只剩標題列，方便一邊找歌一邊聽
+========================================================= */
+@media (max-width:992px){
+	.player-minimize{ display:inline-flex; align-items:center; justify-content:center; }
+	/* 縮小時影片移到畫面外繼續播放（不能用 display:none，部分瀏覽器會停止播放） */
+	.player-panel.is-minimized .player-frame-wrap{
+		position:fixed; left:-10000px; top:0;
+		width:320px; height:180px; padding-bottom:0;
+	}
+	.player-panel.is-minimized .player-panel-head{ margin-bottom:0; }
+	.player-panel.is-minimized .player-mini-toggle{ display:inline-flex; align-items:center; justify-content:center; }
+	.player-mini-toggle.is-unavailable{ display:none !important; }
+	/* 縮小後只剩標題列，頁面底部跟回到最上方按鈕不用再讓出整個播放器的高度 */
+	body.player-open.player-minimized .wrap{ padding-bottom:100px; }
+	body.player-open.player-minimized .back-to-top{ bottom:88px; }
 }
 
 
@@ -341,14 +390,23 @@ h1{
 	- 播放器變成右下角浮動小視窗
 ========================================================= */
 @media (min-width:768px) and (max-width:992px){
+	:root{
+		/*
+			浮動播放器寬度：最寬 400px；畫面很矮時（例如手機橫拿）依高度縮小，
+			讓播放器最多約佔畫面高度的一半，最窄 220px
+		*/
+		--float-player-w:max(220px, min(400px, calc((50vh - 70px) * 16 / 9 + 30px)));
+		/* 浮動播放器高度：影片 16:9 ＋ 標題列與內距約 70px */
+		--float-player-h:calc((var(--float-player-w) - 30px) * 9 / 16 + 70px);
+	}
 	.player-panel.is-active{
 		position:fixed; z-index:50;
 		right:20px; bottom:20px;
-		width:400px;
+		width:var(--float-player-w);
 		box-shadow:0 10px 30px rgba(0,0,0,.55);
 	}
-	body.player-open .wrap{ padding-bottom:320px; }
-	body.player-open .back-to-top{ right:20px; bottom:320px; } /* 右下角播放器上方 */
+	body.player-open .wrap{ padding-bottom:calc(var(--float-player-h) + 40px); }
+	body.player-open .back-to-top{ right:20px; bottom:calc(var(--float-player-h) + 40px); } /* 右下角播放器上方 */
 }
 
 
