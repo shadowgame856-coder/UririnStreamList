@@ -79,10 +79,10 @@
 				<span class="player-panel-title" id="playerPanelTitle"></span>
 				<div class="player-panel-actions">
 					<!-- 縮小時才出現的播放／暫停（手機／平板） -->
-					<button class="btn ghost player-mini-toggle" id="playerMiniToggle" onclick="togglePlayback()" aria-label="暫停">❚❚</button>
+					<button class="btn ghost player-mini-toggle" id="playerMiniToggle" onclick="togglePlayback()" aria-label="暫停"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg></button>
 					<!-- 縮小／展開（手機／平板） -->
-					<button class="btn ghost player-minimize" id="playerMinimizeBtn" onclick="togglePlayerMinimized()" aria-label="縮小播放器" title="縮小播放器">▾</button>
-					<button class="btn ghost" onclick="closePlayer()" aria-label="關閉播放器" title="關閉播放器">✕</button>
+					<button class="btn ghost player-minimize" id="playerMinimizeBtn" onclick="togglePlayerMinimized()" aria-label="縮小播放器" title="縮小播放器"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+					<button class="btn ghost" onclick="closePlayer()" aria-label="關閉播放器" title="關閉播放器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
 				</div>
 			</div>
 			<div class="player-frame-wrap">
@@ -436,9 +436,17 @@ function updatePlayButtons(){
 	const mini = document.getElementById('playerMiniToggle');
 	const controllable = !!activePlayer && activePlayer.type !== 'iframe';
 	mini.classList.toggle('is-unavailable', !controllable);
-	mini.textContent = playerState === 'playing' ? '❚❚' : '▶';
+	mini.innerHTML = playerState === 'playing' ? PLAYER_ICONS.pause : PLAYER_ICONS.play;
 	mini.setAttribute('aria-label', playerState === 'playing' ? '暫停' : '播放');
 }
+
+// 播放器標題列的圖示（SVG，粗細風格統一，在任何字型下大小都一致）
+const PLAYER_ICONS = {
+	play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor"/></svg>',
+	pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg>',
+	chevronDown: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+	chevronUp: '<svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 15 12 9 18 15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+};
 
 // 手機／平板：播放器縮小成只剩標題列（影片移到畫面外繼續播放）
 let playerMinimized = false;
@@ -447,7 +455,7 @@ function setPlayerMinimized(minimized){
 	document.getElementById('playerPanel').classList.toggle('is-minimized', minimized);
 	document.body.classList.toggle('player-minimized', minimized);
 	const btn = document.getElementById('playerMinimizeBtn');
-	btn.textContent = minimized ? '▴' : '▾';
+	btn.innerHTML = minimized ? PLAYER_ICONS.chevronUp : PLAYER_ICONS.chevronDown;
 	btn.setAttribute('aria-label', minimized ? '展開播放器' : '縮小播放器');
 	btn.title = minimized ? '展開播放器' : '縮小播放器';
 }

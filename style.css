@@ -196,11 +196,17 @@ h1{
 	border-radius:6px; padding:6px 10px; font-size:.8rem; cursor:pointer; font-family:inherit;
 	flex-shrink:0;
 }
-.btn.ghost:hover{ color:var(--rose); border-color:var(--rose); }
+/* 滑鼠移入效果只在有滑鼠的裝置上出現；手機點一下後不會一直卡在粉紅色 */
+@media (hover:hover){
+	.btn.ghost:hover{ color:var(--rose); border-color:var(--rose); }
+}
 .player-panel-actions{ display:flex; gap:6px; flex-shrink:0; }
-/* 縮小、縮小時的播放／暫停：只在手機／平板顯示（見下方 max-width:992px） */
-.player-minimize,
-.player-mini-toggle{ display:none; }
+.player-panel-actions .btn{ display:inline-flex; align-items:center; justify-content:center; }
+.player-panel-actions .btn svg{ width:16px; height:16px; } /* 電腦版只有關閉按鈕 */
+/* 縮小、縮小時的播放／暫停：預設隱藏，只在手機／平板顯示（見下方 max-width:992px）
+	要寫在上一條 .btn 規則之後、而且選擇器一樣具體，才蓋得過上面的 display:inline-flex */
+.player-panel-actions .player-minimize,
+.player-panel-actions .player-mini-toggle{ display:none; }
 
 /* ---------- 直播紀錄時間軸 ---------- */
 .stream-timeline{
@@ -369,14 +375,15 @@ h1{
 	- 播放器可以縮小成只剩標題列，方便一邊找歌一邊聽
 ========================================================= */
 @media (max-width:992px){
-	.player-minimize{ display:inline-flex; align-items:center; justify-content:center; }
+	.player-panel-actions .player-minimize{ display:inline-flex; }
+	.player-panel-actions .btn svg{ width:22px; height:22px; } /* 手機／平板的標題列圖示放大 */
 	/* 縮小時影片移到畫面外繼續播放（不能用 display:none，部分瀏覽器會停止播放） */
 	.player-panel.is-minimized .player-frame-wrap{
 		position:fixed; left:-10000px; top:0;
 		width:320px; height:180px; padding-bottom:0;
 	}
 	.player-panel.is-minimized .player-panel-head{ margin-bottom:0; }
-	.player-panel.is-minimized .player-mini-toggle{ display:inline-flex; align-items:center; justify-content:center; }
+	.player-panel.is-minimized .player-mini-toggle{ display:inline-flex; }
 	.player-mini-toggle.is-unavailable{ display:none !important; }
 	/* 縮小後只剩標題列，頁面底部跟回到最上方按鈕不用再讓出整個播放器的高度 */
 	body.player-open.player-minimized .wrap{ padding-bottom:100px; }
@@ -395,9 +402,9 @@ h1{
 			浮動播放器寬度：最寬 400px；畫面很矮時（例如手機橫拿）依高度縮小，
 			讓播放器最多約佔畫面高度的一半，最窄 220px
 		*/
-		--float-player-w:max(220px, min(400px, calc((50vh - 70px) * 16 / 9 + 30px)));
-		/* 浮動播放器高度：影片 16:9 ＋ 標題列與內距約 70px */
-		--float-player-h:calc((var(--float-player-w) - 30px) * 9 / 16 + 70px);
+		--float-player-w:max(220px, min(400px, calc((50vh - 76px) * 16 / 9 + 30px)));
+		/* 浮動播放器高度：影片 16:9 ＋ 標題列與內距約 76px */
+		--float-player-h:calc((var(--float-player-w) - 30px) * 9 / 16 + 76px);
 	}
 	.player-panel.is-active{
 		position:fixed; z-index:50;
