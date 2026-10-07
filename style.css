@@ -261,6 +261,13 @@ h1{
 /* 歌曲列在有圓角裁切的清單裡，外框改畫在內側才不會被切掉 */
 .song-row[role="button"]:focus-visible{ outline-offset:-2px; }
 
+/* ---------- 頁面最下方的非官方聲明 ---------- */
+.site-footer{
+	margin-top:56px; padding-top:20px; border-top:1px solid var(--line);
+	color:var(--muted); font-size:.8rem; line-height:1.8; text-align:center;
+}
+.site-footer p{ margin:0; }
+
 /* ---------- 狀態訊息 ---------- */
 .empty-state{ text-align:center; padding:60px 20px; color:var(--muted); }
 .empty-state .big{
@@ -346,11 +353,22 @@ h1{
 	.song-row--child .song-sub{ order:-1; }
 	.song-group-children{ padding-left:12px; margin-left:12px; }
 
-	/* 唱過多次（收合列）：左邊歌名＋標籤，右邊副標＋「共 X 次」 */
-	.song-row--group{ flex-direction:row; align-items:center; gap:10px; }
-	.song-row--group .song-head{ flex:1 1 auto; }
-	.song-row--group .song-sub{ flex:0 1 auto; max-width:35%; text-align:right; }
-	.song-row--group .chip{ flex:none; }
+	/*
+		唱過多次（收合列）：跟只唱過一次的歌排法一致
+		左邊上排歌名＋標籤、下排原唱，右邊「共 X 次」跨兩行垂直置中
+	*/
+	.song-row--group{
+		display:grid;
+		grid-template-columns:minmax(0, 1fr) auto;
+		grid-template-areas:"head chip" "sub chip";
+		column-gap:12px; row-gap:0;
+		align-items:center;
+	}
+	.song-row--group .song-head{ grid-area:head; }
+	/* 原唱：間距用 margin，沒有原唱時整行隱藏、不會留下空隙影響置中 */
+	.song-row--group .song-sub{ grid-area:sub; max-width:100%; text-align:left; margin-top:4px; }
+	.song-row--group .song-sub:empty{ display:none; }
+	.song-row--group .chip{ grid-area:chip; }
 
 	/* 播放按鈕加大，方便手指點（至少 44px 高） */
 	.song-play-btn{ min-height:44px; padding:8px 12px; font-size:.86rem; }
@@ -385,6 +403,8 @@ h1{
 	.player-panel.is-minimized .player-panel-head{ margin-bottom:0; }
 	.player-panel.is-minimized .player-mini-toggle{ display:inline-flex; }
 	.player-mini-toggle.is-unavailable{ display:none !important; }
+	/* 播放器開著時，聲明可以被播放器蓋住：往上拉回聲明自己的高度，捲到最底時播放器正上方就是分頁按鈕 */
+	body.player-open .site-footer{ margin-bottom:calc(-1 * var(--footer-h, 0px)); }
 	/* 縮小後只剩標題列，頁面底部跟回到最上方按鈕不用再讓出整個播放器的高度 */
 	body.player-open.player-minimized .wrap{ padding-bottom:100px; }
 	body.player-open.player-minimized .back-to-top{ bottom:88px; }

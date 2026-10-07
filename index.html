@@ -6,12 +6,12 @@
 <script src="ga.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="幽李鈴 Uririn 的歌回與直播紀錄：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
+<meta name="description" content="幽李鈴 Uririn 歌回與直播紀錄（非官方整理）：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
 <!-- 分享連結時的預覽卡片（Discord、LINE、X、Facebook 等會讀取這些設定） -->
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="幽李鈴 Uririn">
 <meta property="og:title" content="幽李鈴 Uririn">
-<meta property="og:description" content="幽李鈴 Uririn 的歌回與直播紀錄：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
+<meta property="og:description" content="幽李鈴 Uririn 歌回與直播紀錄（非官方整理）：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
 <meta property="og:locale" content="zh_TW">
 <meta name="twitter:card" content="summary">
 <!--
@@ -101,6 +101,12 @@
 		</div>
 	</main>
 	</div>
+
+	<!-- 非官方聲明 -->
+	<footer class="site-footer">
+		<p>本站為非官方整理，僅供粉絲交流，並非幽李鈴本人經營。</p>
+		<p>影片與歌曲的著作權皆屬各權利人所有。</p>
+	</footer>
 </div>
 
 <!-- 回到最上方：往下捲動一段距離後才出現 -->
@@ -1148,6 +1154,14 @@ function onLayoutChange(){
 }
 new ResizeObserver(onLayoutChange).observe(document.querySelector('.controls'));
 window.addEventListener('resize', onLayoutChange);
+
+// 頁面最下方聲明的高度（含上方間距），寫進 CSS 變數 --footer-h；
+// 手機／平板播放器開著時，style.css 用它讓聲明躲到播放器後面，捲到最底時播放器正上方就是分頁按鈕
+const siteFooter = document.querySelector('.site-footer');
+new ResizeObserver(() => {
+	const height = siteFooter.offsetHeight + parseFloat(getComputedStyle(siteFooter).marginTop);
+	document.documentElement.style.setProperty('--footer-h', `${Math.round(height)}px`);
+}).observe(siteFooter);
 
 // 回到最上方按鈕：往下捲超過 600px 才顯示
 const backToTopBtn = document.getElementById('backToTop');
