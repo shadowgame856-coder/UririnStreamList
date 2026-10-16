@@ -31,7 +31,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # 只加入有產生出來的檔案（例如還沒建立的資料夾就略過）
-          for f in uririn/streams.json uririn/songs.json chion/streams.json chion/songs.json; do
+          for f in uririn/streams.json uririn/songs.json uririn/tweets.json chion/streams.json chion/songs.json chion/tweets.json; do
             if [ -f "$f" ]; then git add "$f"; fi
           done
           git diff --staged --quiet || git commit -m "自動轉換 xlsx 為 json"
