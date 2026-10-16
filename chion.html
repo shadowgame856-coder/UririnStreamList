@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<!-- 希翁的歌單與直播紀錄（隱藏頁面：在幽李鈴的網站輸入暗號後，會在新分頁打開這裡） -->
+<head>
+<!-- Google tag (gtag.js) -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-QP5S6ESL3K"></script>
+<script src="ga.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="希翁 Chion 歌回與直播紀錄（非官方整理）：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
+<!-- 分享連結時的預覽卡片（Discord、LINE、X、Facebook 等會讀取這些設定） -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="希翁 Chion">
+<meta property="og:title" content="希翁 Chion">
+<meta property="og:description" content="希翁 Chion 歌回與直播紀錄（非官方整理）：依語言、年份、月份查找唱過的歌，點了就能直接播放。">
+<meta property="og:locale" content="zh_TW">
+<meta name="twitter:card" content="summary">
+<!--
+	要加預覽圖片時：
+	1. 準備一張 1200×630 的圖片（例如 og-image.png）上傳到 repo，跟 index.html 放在同一層
+	2. 取消下面這行的註解，網址改成圖片的完整網址（要包含 https://）
+	3. 上面的 twitter:card 改成 summary_large_image，X 才會顯示大圖
+-->
+<!-- <meta property="og:image" content="https://shadowgame856-coder.github.io/repo名稱/og-image.png"> -->
+<title>希翁 Chion</title>
+<!-- 分頁小圖示：用 SVG 包表情符號，換圖示只要改裡面的 👻 -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💀</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<style>
+	/* 希翁的人物配色（取自三視圖的色票：桃紅、紫、深灰紫、灰粉、淡紫灰） */
+	:root{
+		--bg: #1b161e;
+		--surface: #261f2b;
+		--surface-2: #31283a;
+		--line: #4c3c50;		/* 色票 3 深灰紫 */
+		--text: #efe8f0;		/* 色票 5 淡紫灰，調亮 */
+		--muted: #a8848c;		/* 色票 4 灰粉 */
+		--gold: #cc64c0;		/* 主色：色票 1 桃紅 */
+		--rose: #b98ad0;		/* 輔色：色票 2 紫，調亮讓深色背景上的文字看得清楚 */
+		--on-accent: #241326;	/* 桃紅、紫色按鈕上的文字 */
+	}
+</style>
+</head>
+<body>
+<div class="wrap">
+	<h1>希翁 Chion</h1>
+	<p class="subtitle"></p>
+
+	<div id="loadingState" class="loading-state">正在讀取資料…</div>
+	<div id="errorState" style="display:none;"></div>
+
+	<div id="mainApp" class="layout" style="display:none;">
+	<!-- 上方：頁籤、搜尋框、篩選（電腦版橫跨左右兩欄） -->
+	<div class="controls">
+		<div class="view-tabs">
+			<button class="view-tab active" id="tabSongs" onclick="switchView('songs')">好聽音樂</button>
+			<button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播紀錄</button>
+		</div>
+
+		<div class="stats" id="statsLine"></div>
+
+		<div id="songsControls">
+			<div class="searchbar">
+				<input type="text" id="searchInput" placeholder="搜尋歌名、歌手或直播名稱…">
+				<button type="button" class="search-clear" onclick="clearSearch('searchInput')" aria-label="清除搜尋" title="清除搜尋">✕</button>
+			</div>
+			<div class="stats" id="songsStatsLine"></div>
+			<div class="chip-bar lang-bar" id="langBar"></div>
+		</div>
+
+		<div id="streamsControls" style="display:none;">
+			<div class="year-pager" id="yearPager"></div>
+			<div class="chip-bar month-bar" id="monthBar"></div>
+			<div class="searchbar">
+				<input type="text" id="streamSearchInput" placeholder="搜尋直播標題、來賓…">
+				<button type="button" class="search-clear" onclick="clearSearch('streamSearchInput')" aria-label="清除搜尋" title="清除搜尋">✕</button>
+			</div>
+			<div class="stats" id="streamsStatsLine"></div>
+			<div class="chip-bar" id="streamTagBar"></div>
+		</div>
+	</div>
+
+	<!-- 左欄：播放器（電腦版固定在左側；手機／平板版播放時變成浮動視窗） -->
+	<aside class="player-column">
+		<div id="playerPanel" class="player-panel">
+			<div class="player-idle">
+				<div class="player-idle-icon">▶</div>
+				<div>點選歌曲的「▶ 播放」開始聆聽</div>
+			</div>
+			<div class="player-panel-head">
+				<span class="player-panel-title" id="playerPanelTitle"></span>
+				<div class="player-panel-actions">
+					<!-- 縮小時才出現的播放／暫停（手機／平板） -->
+					<button class="btn ghost player-mini-toggle" id="playerMiniToggle" onclick="togglePlayback()" aria-label="暫停"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1.5" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.5" fill="currentColor"/></svg></button>
+					<!-- 縮小／展開（手機／平板） -->
+					<button class="btn ghost player-minimize" id="playerMinimizeBtn" onclick="togglePlayerMinimized()" aria-label="縮小播放器" title="縮小播放器"><svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="6 9 12 15 18 9" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+					<button class="btn ghost" onclick="closePlayer()" aria-label="關閉播放器" title="關閉播放器"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg></button>
+				</div>
+			</div>
+			<div class="player-frame-wrap">
+				<div id="playerHost"></div><!-- 播放器由 JS 依平台建立（YouTube／Twitch 官方播放器 API） -->
+			</div>
+		</div>
+	</aside>
+
+	<!-- 右欄：歌單／直播時間軸 -->
+	<main class="content-column">
+		<div id="songsView">
+			<div id="content"></div>
+		</div>
+		<div id="streamsView" style="display:none;">
+			<div id="streamsContent"></div>
+		</div>
+	</main>
+	</div>
+
+	<!-- 非官方聲明 -->
+	<footer class="site-footer">
+		<p>本站為非官方整理，僅供粉絲交流，並非希翁本人經營。</p>
+		<p>影片與歌曲的著作權皆屬各權利人所有。</p>
+	</footer>
+</div>
+
+<!-- 回到最上方：往下捲動一段距離後才出現 -->
+<button id="backToTop" class="back-to-top" onclick="scrollToTop()" aria-label="回到最上方" title="回到最上方">
+	<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+		<polyline points="5 15 12 8 19 15" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+	</svg>
+</button>
+
+<script>
+	// 這個頁面的設定：app.js 會依照這裡的內容顯示名稱、載入資料
+	window.SITE_CONFIG = {
+		siteTitle: '希翁 Chion',
+		streamerName: '希翁',
+		dataPath: 'chion/',
+	};
+</script>
+<script src="app.js"></script>
+</body>
+</html>

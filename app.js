@@ -119,7 +119,26 @@ function secondsToTwitchTime(sec){
 	return `${h}h${m}m${s}s`;
 }
 
-// 依網址組出內嵌播放器的網址（目前支援 YouTube、Twitch）；不支援的平台（例如 X）回傳 null
+// Ragtag Archive 網址解析：支援觀看頁（/watch?v=ID）與嵌入頁（/embed/ID）
+function extractRagtagId(url){
+	if(!url) return null;
+	try{
+		const u = new URL(url);
+		if(u.hostname.replace(/^www\./, '') !== 'archive.ragtag.moe') return null;
+		if(u.pathname === '/watch') return u.searchParams.get('v') || null;
+		const m = u.pathname.match(/^\/embed\/([^/]+)/);
+		return m ? decodeURIComponent(m[1]) : null;
+	}catch(e){ return null; }
+}
+
+// 播放器能不能直接從指定的時間點開始（YouTube、Twitch VOD 可以；Ragtag 的嵌入播放器不支援）
+function canStartAt(url){
+	if(extractYouTubeId(url)) return true;
+	const twitch = extractTwitchInfo(url);
+	return !!twitch && twitch.type === 'video';
+}
+
+// 依網址組出內嵌播放器的網址（目前支援 YouTube、Twitch、Ragtag）；不支援的平台（例如 X）回傳 null
 function buildEmbedSrc(url, seconds){
 	const youtubeId = extractYouTubeId(url);
 	if(youtubeId){
@@ -140,6 +159,9 @@ function buildEmbedSrc(url, seconds){
 			return `https://clips.twitch.tv/embed?clip=${encodeURIComponent(twitch.id)}&parent=${parent}&autoplay=true`;
 		}
 	}
+	// Ragtag 官方嵌入播放器：不支援指定開始時間、自動播放，也沒有控制介面（用一般內嵌，播放器上會顯示時間點提示）
+	const ragtagId = extractRagtagId(url);
+	if(ragtagId) return `https://archive.ragtag.moe/embed/${encodeURIComponent(ragtagId)}`;
 	return null;
 }
 
@@ -223,7 +245,7 @@ function mountPlainIframe(embedSrc){
 	activePlayer = { type:'iframe', instance:iframe };
 }
 
-// 依網址載入影片：YouTube、Twitch（VOD／頻道）用官方 API；其他用一般內嵌
+// 依網址載入影片：YouTube、Twitch（VOD／頻道）用官方 API；其他（Twitch 剪輯、Ragtag）用一般內嵌
 async function loadMedia(url, seconds){
 	const token = ++loadToken;
 	destroyActivePlayer();
@@ -305,6 +327,24 @@ function togglePlayback(){
 
 window.togglePlayback = togglePlayback;
 
+// 時間點提示：播放器沒辦法自動跳到歌曲的時間點時（例如 Ragtag），在播放器左上角提示要拖曳到哪裡
+// 提示不接收點擊（pointer-events:none），不會擋到播放器本身的按鈕
+function showStartHint(timeText){
+	let hint = document.getElementById('playerStartHint');
+	if(!hint){
+		hint = document.createElement('div');
+		hint.id = 'playerStartHint';
+		hint.className = 'player-start-hint';
+		document.querySelector('.player-frame-wrap').appendChild(hint);
+	}
+	hint.innerHTML = `<strong>🎵 從 ${escapeHtml(timeText)} 開始</strong><span>請按播放後拖曳進度條</span>`;
+	hint.hidden = false;
+}
+function hideStartHint(){
+	const hint = document.getElementById('playerStartHint');
+	if(hint) hint.hidden = true;
+}
+
 // 打開播放器面板：顯示方式交給 style.css（電腦版固定在左欄、手機／平板版變成浮動視窗），不需要捲動畫面
 function showPlayerPanel(titleText){
 	document.getElementById('playerPanelTitle').textContent = titleText;
@@ -374,11 +414,14 @@ function playSong(lang, songId){
 	currentSongKey = key;
 	showPlayerPanel(contextLabel ? `${contextLabel} － ${song.name}` : song.name);
 	loadMedia(url, song.timeSeconds);
+	if(song.timeSeconds > 0 && !canStartAt(url)) showStartHint(song.timeDisplay || String(song.timeSeconds));
+	else hideStartHint();
 
 	// 送出 GA 自訂事件：記錄哪首歌被點播（GA 的自動影片追蹤抓不到動態更換的播放器，所以改由這裡主動送）
 	if(typeof gtag === 'function'){
 		const stream = STREAMS[song.streamId];
 		gtag('event', 'play_song', {
+			streamer: CONFIG.streamerName,	// 不同主播的頁面共用同一個 GA，用這個分開統計
 			song_name: song.name,
 			song_id: song.catalogId || '',
 			song_language: lang,
@@ -388,23 +431,25 @@ function playSong(lang, songId){
 }
 window.playSong = playSong;
 
-// 直播紀錄：點直播標題時，在播放器播放整場直播（YouTube、Twitch）
+// 直播紀錄：點直播標題時，在播放器播放整場直播（YouTube、Twitch、Ragtag）
 function playStream(streamId){
 	const stream = STREAMS[streamId];
 	if(!stream || !isPlayableUrl(stream.url)) return;
 	currentSongKey = null; // 播放整場直播，不屬於任何一首歌
 	showPlayerPanel(stream.title || '直播');
 	loadMedia(stream.url, 0);
+	hideStartHint();
 
 	if(typeof gtag === 'function'){
 		gtag('event', 'play_stream', {
+			streamer: CONFIG.streamerName,
 			stream_title: stream.title || '',
 		});
 	}
 }
 window.playStream = playStream;
 
-// 直播標題：可內嵌的平台（YouTube、Twitch）點了在播放器播放；其他平台（例如 X）開新視窗
+// 直播標題：可內嵌的平台（YouTube、Twitch、Ragtag）點了在播放器播放；其他平台（例如 X）開新視窗
 // 可內嵌的連結仍保留 href，使用者還是可以按右鍵或中鍵在新分頁開啟原始網址
 function renderStreamTitleLink(stream){
 	const title = escapeHtml(stream.title || '直播連結');
@@ -422,6 +467,7 @@ function closePlayer(){
 	currentSongKey = null;
 	setPlayerState('idle');
 	setPlayerMinimized(false);
+	hideStartHint();
 	document.getElementById('playerPanel').classList.remove('is-active');
 	document.body.classList.remove('player-open');
 }
@@ -1019,7 +1065,7 @@ async function init(){
 		document.getElementById('errorState').innerHTML = `<div class="error-state">
 			<strong>讀取資料失敗。</strong><br><br>
 			請確認：<br>
-			1. <code>streams.json</code> 和 <code>songs.json</code> 跟這個 html 檔案放在同一個資料夾<br>
+			1. <code>${escapeHtml(CONFIG.dataPath)}</code> 資料夾裡有 <code>streams.json</code> 和 <code>songs.json</code><br>
 			2. 檔名完全一致（含大小寫）<br>
 			3. 這個頁面是透過網址（http/https）打開的，不是直接雙擊本機檔案開啟<br><br>
 			錯誤訊息：${escapeHtml(e.message || String(e))}
