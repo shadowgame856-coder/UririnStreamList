@@ -271,6 +271,22 @@ h1{
 /* 歌曲列在有圓角裁切的清單裡，外框改畫在內側才不會被切掉 */
 .song-row[role="button"]:focus-visible{ outline-offset:-2px; }
 
+/* ---------- 推文小卡（直播紀錄的來源是推文、而且有填 description 時） ----------
+	顏色都用頁面的主題變數，在幽李鈴、希翁的頁面會各自套用自己的配色
+*/
+.tweet-card{
+	max-width:560px; margin:2px 0 10px; padding:10px 14px 12px;
+	background:var(--surface); border:1px solid var(--line); border-radius:8px;
+}
+.tweet-card a{ color:var(--gold); text-decoration:none; }
+@media (hover:hover){ .tweet-card a:hover{ text-decoration:underline; } }
+.tweet-card-source{ color:var(--muted); font-size:.78rem; }
+.tweet-card-title{ display:inline-block; margin-top:2px; font-weight:700; font-size:.95rem; }
+.tweet-card-text{
+	margin-top:8px; color:var(--text); font-size:.9rem; line-height:1.6;
+	white-space:pre-wrap; word-break:break-word; /* 保留換行；很長的網址會自動斷行 */
+}
+
 /* ---------- 頁面最下方的非官方聲明 ---------- */
 .site-footer{
 	margin-top:56px; padding-top:20px; border-top:1px solid var(--line);

@@ -461,6 +461,39 @@ function renderStreamTitleLink(stream){
 	return `<a href="${href}" target="_blank" rel="noopener">${title}</a>`;
 }
 
+// ================= 推文小卡 =================
+// 直播紀錄的來源是單則推文（Twitter／X），而且 Excel 有填 description（推文內文）時，顯示成推文小卡
+// note 是私人備註，轉換程式不會輸出，網站上看不到
+function isTweetUrl(url){
+	return /^https?:\/\/(www\.|mobile\.)?(twitter|x)\.com\/[^/]+\/status\//i.test(url || '');
+}
+
+// 推文內容：保留換行，網址、@帳號、#標籤變成可以點的連結
+//	網址只包含網址會用到的英數字與符號，後面緊接的中文或全形標點不會被算進網址
+//	#標籤只包含文字、數字、底線，後面接的全形標點不會被算進標籤
+function linkifyTweet(text){
+	const pattern = /(https?:\/\/[A-Za-z0-9\-._~:/?#[\]@!$&'()*+,;=%]+)|(@[A-Za-z0-9_]{1,15})|(#[\p{L}\p{N}_]+)/gu;
+	let html = '', last = 0, m;
+	while((m = pattern.exec(text))){
+		html += escapeHtml(text.slice(last, m.index));
+		const token = m[0];
+		const href = m[2] ? `https://x.com/${token.slice(1)}`
+			: m[3] ? `https://x.com/hashtag/${encodeURIComponent(token.slice(1))}`
+			: token;
+		html += `<a href="${escapeHtml(href)}" target="_blank" rel="noopener">${escapeHtml(token)}</a>`;
+		last = m.index + token.length;
+	}
+	return html + escapeHtml(text.slice(last));
+}
+
+function renderTweetCard(stream){
+	return `<div class="tweet-card">
+				<div class="tweet-card-source">Twitter</div>
+				<a class="tweet-card-title" href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '推文')}</a>
+				<div class="tweet-card-text">${linkifyTweet(stream.description)}</div>
+			</div>`;
+}
+
 function closePlayer(){
 	loadToken++; // 讓還在載入中的播放器作廢
 	destroyActivePlayer();
@@ -925,7 +958,7 @@ function renderStreamsView(){
 
 		html += `<div class="stream-block">
 			<div class="stream-block-date">${escapeHtml(stream.date || '未填日期')}</div>
-			<div class="stream-block-title">${renderStreamTitleLink(stream)}</div>
+			${(isTweetUrl(stream.url) && stream.description) ? renderTweetCard(stream) : `<div class="stream-block-title">${renderStreamTitleLink(stream)}</div>`}
 			${(stream.tags && stream.tags.length) ? `<div class="stream-tags-row">${stream.tags.map(t => `<span role="button" tabindex="0" class="chip" onclick="setStreamTag('${escapeHtml(t)}')">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
 			${hostName ? `<div class="stream-meta" style="margin-bottom:4px;">在 ${escapeHtml(hostName)} 家</div>` : ''}
 			${guestsDisplay ? `<div class="stream-meta" style="margin-bottom:10px;">來賓：${escapeHtml(guestsDisplay)}</div>` : ''}

@@ -12,6 +12,21 @@ import openpyxl, json, re, datetime, os
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DATA_DIRS = ['uririn', 'chion']	# 要轉換的資料夾（相對於 repo 根目錄）
 
+# 直播場次的欄位：note 是私人備註，不會輸出到網站；description 是公開的小卡內容（例如推文內文）
+
+
+def card_text(v):
+	r"""小卡內容：把 Excel 裡的各種寫法整理成網頁可以直接顯示的文字
+		- 儲存格裡的換行（Alt + Enter）、直接打的 \n（反斜線加 n）都轉成換行
+		- \uD83D\uDDA4 這種從程式或 API 複製來的跳脫碼轉回原本的字（例如 🖤）
+	"""
+	if v in (None, ''):
+		return ''
+	s = str(v).replace('\r\n', '\n').replace('\\n', '\n')
+	s = re.sub(r'\\u([0-9a-fA-F]{4})', lambda m: chr(int(m.group(1), 16)), s)
+	s = s.encode('utf-16', 'surrogatepass').decode('utf-16')	# 表情符號是由兩段跳脫碼組成，這裡合併回一個字
+	return s.strip()
+
 
 def header_map(ws):
 	header_row = next(ws.iter_rows(min_row=1, max_row=1, values_only=True))
@@ -125,6 +140,10 @@ def convert_folder(folder):
 				'tags': parse_tags(get(row, m, 'tag', 'tags')),
 				'guests': parse_tags(get(row, m, 'feat', 'guests', 'guest', '來賓')),
 			}
+			# 小卡內容：有填 description 才輸出（note 是私人備註，不輸出）
+			description = card_text(get(row, m, 'description'))
+			if description:
+				streams[sid]['description'] = description
 
 	with open(os.path.join(folder_path, 'streams.json'), 'w', encoding='utf-8') as f:
 		json.dump({'streams': streams, 'streamYears': stream_years}, f, ensure_ascii=False)
