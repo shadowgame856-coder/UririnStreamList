@@ -58,6 +58,7 @@
 		<div class="view-tabs">
 			<button class="view-tab active" id="tabSongs" onclick="switchView('songs')">好聽音樂</button>
 			<button class="view-tab" id="tabStreams" onclick="switchView('streams')">直播紀錄</button>
+			<button class="view-tab" id="tabTweets" onclick="switchView('tweets')">推文紀錄</button>
 		</div>
 
 		<div class="stats" id="statsLine"></div>
@@ -80,6 +81,16 @@
 			</div>
 			<div class="stats" id="streamsStatsLine"></div>
 			<div class="chip-bar" id="streamTagBar"></div>
+		</div>
+
+		<div id="tweetsControls" style="display:none;">
+			<div class="year-pager" id="tweetYearPager"></div>
+			<div class="chip-bar month-bar" id="tweetMonthBar"></div>
+			<div class="searchbar">
+				<input type="text" id="tweetSearchInput" placeholder="搜尋推文標題、內容…">
+				<button type="button" class="search-clear" onclick="clearSearch('tweetSearchInput')" aria-label="清除搜尋" title="清除搜尋">✕</button>
+			</div>
+			<div class="stats" id="tweetsStatsLine"></div>
 		</div>
 	</div>
 
@@ -114,6 +125,9 @@
 		<div id="streamsView" style="display:none;">
 			<div id="streamsContent"></div>
 		</div>
+		<div id="tweetsView" style="display:none;">
+			<div id="tweetsContent"></div>
+		</div>
 	</main>
 	</div>
 
@@ -137,6 +151,7 @@
 		siteTitle: '希翁 Chion',
 		streamerName: '希翁',
 		dataPath: 'chion/',
+		tweets: true,	// 多一個「推文紀錄」頁籤，讀取 chion/tweets.json
 	};
 </script>
 <script src="app.js"></script>

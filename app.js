@@ -4,12 +4,18 @@ const CONFIG = Object.assign({
 	siteTitle: '',		// 網站標題（瀏覽器分頁標題也會用到）
 	streamerName: '',	// 主播名字（直播紀錄「別人家」場次的來賓清單會用到）
 	dataPath: './',		// streams.json、songs.json 所在的資料夾，結尾要有 /
+	tweets: false,		// true：多一個「推文紀錄」頁籤，讀取同一個資料夾的 tweets.json
 }, window.SITE_CONFIG || {});
 
 let STREAMS = {};        // { id: {id,year,date,title,url,tags} }
 let STREAM_YEARS = [];   // 依 streams.xlsx 的工作表順序（工作表名稱＝年份）
 let SONGS = {};          // { lang: [ {id,streamId,timeSeconds,timeDisplay,name,artist,tags} ] }
 let LANGUAGES = [];
+let TWEETS = {};         // { id: {id,year,date,time,title,url,description} }（CONFIG.tweets 開啟時才有）
+let TWEET_YEARS = [];
+let tweetsLoadError = '';	// 推文讀取失敗時的訊息（只影響推文紀錄頁籤，其他頁籤照常）
+let activeTweetYear = null;
+let activeTweetMonth = null;
 
 let currentView = 'songs';
 let activeLang = null;
@@ -56,8 +62,8 @@ function refreshPageSize(){
 }
 PHONE_MEDIA.addEventListener('change', refreshPageSize);
 
-function sortedYears(){
-	return [...STREAM_YEARS].sort((a,b) => {
+function sortedYears(list = STREAM_YEARS){
+	return [...list].sort((a,b) => {
 		const na = parseInt(a, 10), nb = parseInt(b, 10);
 		if(!isNaN(na) && !isNaN(nb)) return nb - na;
 		return String(b).localeCompare(String(a));
@@ -488,7 +494,6 @@ function linkifyTweet(text){
 
 function renderTweetCard(stream){
 	return `<div class="tweet-card">
-				<div class="tweet-card-source">Twitter</div>
 				<a class="tweet-card-title" href="${escapeHtml(stream.url)}" target="_blank" rel="noopener">${escapeHtml(stream.title || '推文')}</a>
 				<div class="tweet-card-text">${linkifyTweet(stream.description)}</div>
 			</div>`;
@@ -509,25 +514,36 @@ window.closePlayer = closePlayer;
 // ================= 頁籤切換 =================
 // 瀏覽器分頁標題：「網站名稱 | 目前頁籤」，頁籤名稱直接讀按鈕文字，改頁籤名稱時會自動跟著變
 const SITE_TITLE = CONFIG.siteTitle;
+const VIEW_TAB_IDS = { songs: 'tabSongs', streams: 'tabStreams', tweets: 'tabTweets' };
 function updateDocumentTitle(){
-	const tab = document.getElementById(currentView === 'songs' ? 'tabSongs' : 'tabStreams');
+	const tab = document.getElementById(VIEW_TAB_IDS[currentView]);
 	document.title = `${SITE_TITLE} | ${tab.textContent.trim()}`;
 }
 
 function switchView(view){
+	if(view === 'tweets' && !CONFIG.tweets) view = 'songs';
 	currentView = view;
 	updateDocumentTitle();
-	document.getElementById('tabSongs').classList.toggle('active', view === 'songs');
-	document.getElementById('tabStreams').classList.toggle('active', view === 'streams');
-	document.getElementById('songsControls').style.display = view === 'songs' ? 'block' : 'none';
-	document.getElementById('streamsControls').style.display = view === 'streams' ? 'block' : 'none';
-	document.getElementById('songsView').style.display = view === 'songs' ? 'block' : 'none';
-	document.getElementById('streamsView').style.display = view === 'streams' ? 'block' : 'none';
+	// 頁籤、上方控制區、下方內容：只顯示目前這個頁籤的（推文紀錄只有開啟的頁面才有這些元素）
+	for(const name of ['songs', 'streams', 'tweets']){
+		const show = view === name;
+		const tab = document.getElementById(VIEW_TAB_IDS[name]);
+		if(tab) tab.classList.toggle('active', show);
+		for(const id of [`${name}Controls`, `${name}View`]){
+			const el = document.getElementById(id);
+			if(el) el.style.display = show ? 'block' : 'none';
+		}
+	}
+	// 推文紀錄沒有影片可以播：電腦版不顯示播放器、時間軸置中（樣式在 style.css 的 .view-tweets）
+	document.getElementById('mainApp').classList.toggle('view-tweets', view === 'tweets');
+	document.body.classList.toggle('view-tweets', view === 'tweets'); // 回到最上方按鈕要避開浮動播放器
 	if(view === 'songs'){
 		render();
 		refreshPageSize();
-	} else {
+	}else if(view === 'streams'){
 		renderStreamsView();
+	}else{
+		renderTweetsView();
 	}
 	syncUrl(true);
 }
@@ -781,19 +797,15 @@ function setMonth(month){
 }
 window.setMonth = setMonth;
 
-// 月份按鈕：只列出該年有直播的月份，新的月份排前面（跟時間軸順序一致）
-function renderMonthBar(yearStreams){
-	const counts = new Map();
-	for(const s of yearStreams){
-		const m = monthOf(s.date);
-		if(m) counts.set(m, (counts.get(m) || 0) + 1);
-	}
-	const months = [...counts.keys()].sort((a,b) => b - a);
-	const bar = document.getElementById('monthBar');
+// 月份按鈕：只列出該年有資料的月份，新的月份排前面（跟時間軸順序一致）
+//	直播紀錄、推文紀錄共用：items 是該年的資料，barId 是按鈕列的 id，active 是目前選的月份，setter 是點了要呼叫的函式名稱
+function renderMonthBar(items, barId = 'monthBar', active = activeMonth, setter = 'setMonth'){
+	const months = [...new Set(items.map(s => monthOf(s.date)).filter(Boolean))].sort((a,b) => b - a);
+	const bar = document.getElementById(barId);
 	if(months.length === 0){ bar.innerHTML = ''; return; }
-	let html = `<span role="button" tabindex="0" class="chip${activeMonth===null?' active':''}" onclick="setMonth(null)">全部月份</span>`;
+	let html = `<span role="button" tabindex="0" class="chip${active===null?' active':''}" onclick="${setter}(null)">全部月份</span>`;
 	for(const m of months){
-		html += `<span role="button" tabindex="0" class="chip${activeMonth===m?' active':''}" onclick="setMonth(${m})">${m} 月</span>`;
+		html += `<span role="button" tabindex="0" class="chip${active===m?' active':''}" onclick="${setter}(${m})">${m} 月</span>`;
 	}
 	bar.innerHTML = html;
 }
@@ -981,6 +993,82 @@ function clearSearch(inputId){
 }
 window.clearSearch = clearSearch;
 
+// ================= 推文紀錄（依年份分頁，CONFIG.tweets 開啟的頁面才有）=================
+function setTweetYear(year){
+	activeTweetYear = year;
+	activeTweetMonth = null; // 換年份時，月份篩選回到「全部」
+	renderTweetsView();
+	syncUrl(true);
+}
+window.setTweetYear = setTweetYear;
+
+function setTweetMonth(month){
+	activeTweetMonth = month;
+	renderTweetsView();
+	syncUrl(true);
+}
+window.setTweetMonth = setTweetMonth;
+
+function tweetsInYear(year){
+	return Object.values(TWEETS)
+		.filter(t => t.year === year)
+		.sort((a,b) => {
+			const byTime = `${b.date} ${b.time}`.localeCompare(`${a.date} ${a.time}`);
+			if(byTime !== 0) return byTime;
+			return (parseFloat(b.id) || 0) - (parseFloat(a.id) || 0); // 同一個時間：依 id 倒序
+		});
+}
+
+function renderTweetsView(){
+	const content = document.getElementById('tweetsContent');
+	const stats = document.getElementById('tweetsStatsLine');
+	statsLine.textContent = '';
+	if(tweetsLoadError){
+		content.innerHTML = `<div class="error-state">讀取推文紀錄失敗：${escapeHtml(tweetsLoadError)}</div>`;
+		stats.textContent = '';
+		return;
+	}
+	document.getElementById('tweetYearPager').innerHTML = sortedYears(TWEET_YEARS).map(y =>
+		`<button class="year-btn${activeTweetYear===y?' active':''}" onclick="setTweetYear('${y}')">${escapeHtml(y)} 年</button>`
+	).join('');
+	if(!activeTweetYear){
+		content.innerHTML = `<div class="empty-state"><div class="big">還沒有任何推文紀錄</div></div>`;
+		stats.textContent = '';
+		return;
+	}
+
+	let list = tweetsInYear(activeTweetYear);
+	renderMonthBar(list, 'tweetMonthBar', activeTweetMonth, 'setTweetMonth');
+	if(activeTweetMonth !== null) list = list.filter(t => monthOf(t.date) === activeTweetMonth);
+	const q = document.getElementById('tweetSearchInput').value.trim();
+	if(q){
+		const lower = q.toLowerCase();
+		list = list.filter(t => `${t.title}\n${t.description}`.toLowerCase().includes(lower));
+	}
+
+	const filterParts = [`${activeTweetYear} 年`];
+	if(activeTweetMonth !== null) filterParts.push(`${activeTweetMonth} 月`);
+	if(q) filterParts.push(`「${q}」`);
+	stats.textContent = `${filterParts.join(' · ')} · 共 ${list.length} 則`;
+
+	if(list.length === 0){
+		content.innerHTML = `<div class="empty-state">
+			<div class="big">沒有符合的推文</div>
+			<div>換個關鍵字或月份試試看</div>
+		</div>`;
+		return;
+	}
+	content.innerHTML = `<div class="stream-timeline">${list.map(t => `
+		<div class="stream-block">
+			<div class="stream-block-date">${escapeHtml(t.date)}${t.time ? ` ${escapeHtml(t.time)}` : ''}</div>
+			${renderTweetCard(t)}
+		</div>`).join('')}
+	</div>`;
+}
+
+const tweetSearchInput = document.getElementById('tweetSearchInput');
+if(tweetSearchInput) tweetSearchInput.addEventListener('input', () => { renderTweetsView(); syncUrlLater(); });
+
 // ================= 讀取 json 資料檔（位置由 CONFIG.dataPath 設定） =================
 async function fetchJson(path){
 	const res = await fetch(path, { cache: 'no-store' });
@@ -998,7 +1086,18 @@ async function loadAllData(){
 	STREAM_YEARS = streamsData.streamYears || [];
 	SONGS = songsData.songs || {};
 	LANGUAGES = Object.keys(SONGS);
+
+	if(CONFIG.tweets){
+		try{
+			const tweetsData = await fetchJson(`${CONFIG.dataPath}tweets.json`);
+			TWEETS = tweetsData.tweets || {};
+			TWEET_YEARS = tweetsData.tweetYears || [];
+		}catch(e){
+			tweetsLoadError = e.message || String(e);
+		}
+	}
 	activeYear = STREAM_YEARS.length ? sortedYears()[0] : null;
+	activeTweetYear = TWEET_YEARS.length ? sortedYears(TWEET_YEARS)[0] : null;
 }
 
 // ================= 鍵盤操作 =================
@@ -1026,6 +1125,7 @@ document.addEventListener('keydown', (e) => {
 // 頁數不記錄：每頁筆數依裝置高度計算，同一個頁數在不同裝置上的內容不一樣
 //	好聽音樂：lang（語言）、q（搜尋）
 //	直播紀錄：tab=streams、year（年份，最新年份時省略）、month（月份）、tag（標籤）、q（搜尋）
+//	推文紀錄：tab=tweets、year、month、q
 let applyingUrlState = false; // 正在從網址還原狀態時，不要再寫回網址
 
 function buildUrlParams(){
@@ -1036,6 +1136,12 @@ function buildUrlParams(){
 		if(activeMonth !== null) params.set('month', activeMonth);
 		if(activeStreamTag) params.set('tag', activeStreamTag);
 		const q = document.getElementById('streamSearchInput').value.trim();
+		if(q) params.set('q', q);
+	}else if(currentView === 'tweets'){
+		params.set('tab', 'tweets');
+		if(activeTweetYear && activeTweetYear !== sortedYears(TWEET_YEARS)[0]) params.set('year', activeTweetYear);
+		if(activeTweetMonth !== null) params.set('month', activeTweetMonth);
+		const q = document.getElementById('tweetSearchInput').value.trim();
 		if(q) params.set('q', q);
 	}else{
 		if(activeLang) params.set('lang', activeLang);
@@ -1066,11 +1172,17 @@ function syncUrlLater(){
 function applyUrlState(){
 	applyingUrlState = true;
 	const params = new URLSearchParams(window.location.search);
-	const view = params.get('tab') === 'streams' ? 'streams' : 'songs';
-	if(view === 'streams'){
+	const tab = params.get('tab');
+	const view = tab === 'streams' ? 'streams' : (tab === 'tweets' && CONFIG.tweets) ? 'tweets' : 'songs';
+	const month = parseInt(params.get('month'), 10);
+	if(view === 'tweets'){
+		const year = params.get('year');
+		activeTweetYear = TWEET_YEARS.includes(year) ? year : (TWEET_YEARS.length ? sortedYears(TWEET_YEARS)[0] : null);
+		activeTweetMonth = (month >= 1 && month <= 12) ? month : null;
+		document.getElementById('tweetSearchInput').value = params.get('q') || '';
+	}else if(view === 'streams'){
 		const year = params.get('year');
 		activeYear = STREAM_YEARS.includes(year) ? year : (STREAM_YEARS.length ? sortedYears()[0] : null);
-		const month = parseInt(params.get('month'), 10);
 		activeMonth = (month >= 1 && month <= 12) ? month : null;
 		const tag = params.get('tag');
 		activeStreamTag = tag ? (allStreamTags().find(t => t.toLowerCase() === tag.toLowerCase()) || null) : null;
@@ -1083,6 +1195,7 @@ function applyUrlState(){
 	}
 	switchView(view);
 	applyingUrlState = false;
+	syncUrl(false); // 網址裡不合法的值已經被忽略，把網址整理成實際顯示的狀態（取代目前這筆，不新增瀏覽紀錄）
 }
 window.addEventListener('popstate', applyUrlState);
 

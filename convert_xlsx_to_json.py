@@ -6,6 +6,7 @@
 	uririn/	→ 幽李鈴（index.html）
 	chion/	→ 希翁（chion.html）
 資料夾裡沒有 streams.xlsx 就跳過
+資料夾裡有 tweets.xlsx（推文紀錄）時，另外產生 tweets.json
 """
 import openpyxl, json, re, datetime, os
 
@@ -104,6 +105,37 @@ def date_to_str(v):
 	return str(v).strip()
 
 
+DATETIME_TEXT = re.compile(
+	r'^(\d{4})[/-](\d{1,2})[/-](\d{1,2})'
+	r'(?:[ T]+(上午|下午|AM|PM)?\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?)?$', re.I)
+
+def date_time_parts(v):
+	"""推文的日期時間拆成 ('YYYY-MM-DD', 'HH:MM')，沒有時間時第二個是 ''
+		支援：2022/5/25 下午 07:22、2022-05-25 19:22、Excel 的日期時間格式
+	"""
+	if v in (None, ''):
+		return '', ''
+	if isinstance(v, datetime.datetime):
+		return v.strftime('%Y-%m-%d'), v.strftime('%H:%M')
+	if isinstance(v, datetime.date):
+		return v.strftime('%Y-%m-%d'), ''
+	s = str(v).strip()
+	m = DATETIME_TEXT.match(s)
+	if not m:
+		return s, ''
+	year, month, day, ampm_before, hour, minute, ampm_after = m.groups()
+	date = f'{int(year):04d}-{int(month):02d}-{int(day):02d}'
+	if hour is None:
+		return date, ''
+	h = int(hour)
+	ampm = (ampm_before or ampm_after or '').upper()
+	if ampm in ('下午', 'PM') and h < 12:
+		h += 12
+	elif ampm in ('上午', 'AM') and h == 12:
+		h = 0
+	return date, f'{h:02d}:{int(minute):02d}'
+
+
 INVISIBLE_CHARS = re.compile(r'[\u200b\u200c\u200d\u200e\u200f\ufeff]')
 
 def clean_name(v):
@@ -147,6 +179,35 @@ def convert_folder(folder):
 
 	with open(os.path.join(folder_path, 'streams.json'), 'w', encoding='utf-8') as f:
 		json.dump({'streams': streams, 'streamYears': stream_years}, f, ensure_ascii=False)
+
+	# ========== 推文紀錄 tweets.xlsx（有這個檔案才處理）：一個工作表 = 一個年份 ==========
+	tweets_path = os.path.join(folder_path, 'tweets.xlsx')
+	if os.path.exists(tweets_path):
+		wb_tweets = openpyxl.load_workbook(tweets_path, data_only=True)
+		tweets = {}
+		tweet_years = []
+		for sheet_name in wb_tweets.sheetnames:
+			ws = wb_tweets[sheet_name]
+			m = header_map(ws)
+			tweet_years.append(sheet_name)
+			for row in ws.iter_rows(min_row=2, values_only=True):
+				tid = get(row, m, 'id')
+				if tid in (None, ''):
+					continue
+				tid = normalize_id(tid)
+				date, time = date_time_parts(get(row, m, 'date'))
+				tweets[tid] = {
+					'id': tid,
+					'year': sheet_name,
+					'date': date,
+					'time': time,
+					'title': str(get(row, m, 'title', default='') or ''),
+					'url': str(get(row, m, 'url', default='') or ''),
+					'description': card_text(get(row, m, 'description')),
+				}
+		with open(os.path.join(folder_path, 'tweets.json'), 'w', encoding='utf-8') as f:
+			json.dump({'tweets': tweets, 'tweetYears': tweet_years}, f, ensure_ascii=False)
+		print(f'轉換完成：{label}tweets.json（{len(tweets)} 則推文）')
 
 	# ========== 2. songs.xlsx（目錄）：一個工作表 = 一個語言 ==========
 	# 目錄的 id 用語言前綴格式（例如 zh1、ja1、en1），本身已經全域唯一，直接用 id 查就好。
